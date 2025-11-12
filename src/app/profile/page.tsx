@@ -14,8 +14,8 @@ type UserData = {
   boltCreditAmount: number;
   totalChargeKWh: number;
   offsetCo2: number;
-  totalInvestIota: number;
-  totalIotaEarnings: number;
+  totalInvestHbar: number;
+  totalHbarEarnings: number;
 };
 
 export default function Profile() {
@@ -198,10 +198,10 @@ export default function Profile() {
               height={40}
             />
             <p className="mt-4 text-sm font-medium text-gray-700 text-center">
-              Invest (IOTA)
+              Invest (HBAR)
             </p>
             <span className="mt-1 text-lg font-bold text-gray-900">
-              {userData.totalInvestIota}
+              {userData.totalInvestHbar}
             </span>
           </div>
 
@@ -214,10 +214,10 @@ export default function Profile() {
               height={40}
             />
             <p className="mt-4 text-sm font-medium text-gray-700 text-center">
-              Earnings (IOTA)
+              Earnings (HBAR)
             </p>
             <span className="mt-1 text-lg font-bold text-gray-900">
-              {userData.totalIotaEarnings}
+              {userData.totalHbarEarnings}
             </span>
           </div>
         </div>

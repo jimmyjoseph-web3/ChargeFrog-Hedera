@@ -51,7 +51,7 @@ export default function FullChargedDrawer({
   }, [walletAddress]);
 
   const shortened = shortenTxHash(txHash);
-  const txUrl = `https://iotascan.com/testnet/tx/${txHash}`;
+  const txUrl = `https://hashscan.io/testnet/transaction/${txHash}`;
 
   // Remove activeCharge API call
   const removeActiveCharge = async () => {

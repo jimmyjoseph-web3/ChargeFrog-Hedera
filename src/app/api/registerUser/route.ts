@@ -18,8 +18,8 @@ export async function POST(request: Request) {
       isInvestor: false,
       totalChargeKWh: 0,
       offsetCo2: 0,
-      totalInvestIota: 0,
-      totalIotaEarnings: 0,
+      totalInvestHbar: 0,
+      totalHbarEarnings: 0,
       boltCreditAmount: 0
     });
 
