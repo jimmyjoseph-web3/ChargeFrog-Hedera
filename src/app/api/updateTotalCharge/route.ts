@@ -1,7 +1,7 @@
 // app/api/ev/charge/route.ts
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebaseAdmin";
-import { convertKwhToCo2Offset } from "@/utils/co2Offset";
+import { db } from "@/src/lib/firebaseAdmin";
+import { convertKwhToCo2Offset } from "@/src/utils/co2Offset";
 
 interface ChargeRequestBody {
   walletAddress: string;

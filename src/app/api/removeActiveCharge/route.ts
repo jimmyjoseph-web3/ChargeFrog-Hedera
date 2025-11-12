@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebaseAdmin";
+import { db } from "@/src/lib/firebaseAdmin";
 
 // Allowed origin for CORS
 const ALLOWED_ORIGIN = "https://chargefrog-control.vercel.app";
