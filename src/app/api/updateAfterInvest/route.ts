@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     await userRef.update({
       recentInvestment: currentStationKey,
       isInvestor: true,
-      totalInvestIota: (userData.totalInvestIota || 0) + investAmount,
+      totalInvestHbar: (userData.totalInvestHbar || 0) + investAmount,
     });
 
     // === 3. Update station shares and token percentage ===
