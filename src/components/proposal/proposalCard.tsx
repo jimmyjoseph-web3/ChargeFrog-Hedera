@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebaseClient";
+import { db } from "@/src/lib/firebaseClient";
 import { ref, onValue, off, DataSnapshot } from "firebase/database";
 
 interface StationData {
   proposalId: string;
   stationName: string;
-  openInvestmentDate: string; // format: "31/10/2025"
+  openInvestmentDate: string;
   [key: string]: any;
 }
 
