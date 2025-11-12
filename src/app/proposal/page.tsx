@@ -44,7 +44,7 @@ export default function Proposal() {
           {/* Description */}
           <p className="text-gray-700 text-md leading-relaxed">
             Fractional ownership of EV charging infrastructure <br />
-            made possible with asset tokenization on IOTA.
+            made possible with asset tokenization on Hedera.
           </p>
 
           {/* Past Rounds Box */}

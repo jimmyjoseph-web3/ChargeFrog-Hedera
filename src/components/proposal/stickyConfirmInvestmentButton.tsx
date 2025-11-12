@@ -40,6 +40,7 @@ export default function StickyConfirmInvestmentButton({
 
       toast.loading("⏳ Sending HBAR...");
 
+      // Send the HBAR transaction
       const txHash = await sendTransactionAsync({
         to: recipient,
         value: parseEther(amount.toString()),
@@ -48,21 +49,46 @@ export default function StickyConfirmInvestmentButton({
       toast.dismiss();
       toast.success("✅ Investment successful!");
 
-      // Optional: Update Firebase or backend
+      // 🔹 Step 1: Call your ChargeFrog API to register the investor
+      const registerResponse = await fetch(
+        "https://chargefrog-hedera-admin-endpoints.vercel.app/api/registerInvestor",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            walletAddress: address,
+            stationId,
+            requestedShares: amount,
+            investTxHash: txHash,
+          }),
+        }
+      );
+
+      if (!registerResponse.ok) {
+        const errorText = await registerResponse.text();
+        throw new Error(
+          `Failed to register investor: ${registerResponse.status} ${errorText}`
+        );
+      }
+
+      // 🔹 Step 2 (optional): update Firebase or local state
       await fetch("/api/updateAfterInvest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           walletAddress: address,
           stationId,
-          investAmount: amount
+          investAmount: amount,
         }),
       });
 
+      // 🔹 Step 3: trigger callback if provided
       onTransactionComplete?.(txHash, amount);
+
+      toast.success("🎉 You're on the list!");
     } catch (error: any) {
       toast.dismiss();
-      console.error("❌ Transaction failed:", error);
+      console.error("❌ Transaction or registration failed:", error);
       toast.error(error.message || "Transaction failed");
     } finally {
       setIsProcessing(false);

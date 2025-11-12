@@ -55,7 +55,7 @@ export default function InvestmentSuccessDrawer({
             className="text-md text-gray-700 leading-relaxed mb-5"
             dangerouslySetInnerHTML={{
               __html:
-                "Welcome to the ChargeFrog swarm! <br/> You now own a piece of the charging future.",
+                "Welcome to the ChargeFrog swarm! <br/> Your investment will be processed by our Hedera ATS workflow shortly.",
             }}
           />
 

@@ -13,7 +13,7 @@ type Station = {
   stationId: number;
   stationName: string;
   bannerImageUrl: string;
-  iotaPriceAtCreation: number;
+  hbarPriceAtCreation: number;
   [key: string]: any;
 };
 

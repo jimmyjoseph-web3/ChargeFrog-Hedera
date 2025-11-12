@@ -26,16 +26,14 @@ export default function Profile() {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const router = useRouter();
 
-  // Fetch user data from Firebase when wallet address changes
+  // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
       if (!address) return;
-
       try {
         const walletAddress = address.replace(/[.#$/[\]]/g, "_");
         const userRef = ref(db, `users/${walletAddress}`);
         const snapshot = await get(userRef);
-
         if (snapshot.exists()) {
           setUserData(snapshot.val());
         } else {
@@ -45,7 +43,6 @@ export default function Profile() {
         console.error("Failed to load user data:", err);
       }
     };
-
     fetchUserData();
   }, [address]);
 
@@ -73,10 +70,14 @@ export default function Profile() {
     }
   };
 
-  // If wallet is not connected, render nothing (or redirect)
+  const formatNumber = (num: number) => {
+    if (num === undefined || num === null || isNaN(num)) return "0";
+    // Only show up to 2 decimals, trim trailing zeros
+    return parseFloat(num.toFixed(2)).toString();
+  };
+
   if (!isConnected || !address) return null;
 
-  // Show loading placeholder while fetching user data
   if (!userData) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white">
@@ -98,8 +99,8 @@ export default function Profile() {
           />
         </div>
 
+        {/* Wallet address + disconnect */}
         <div className="flex gap-2 mt-8">
-          {/* Address pill */}
           <div
             onClick={handleCopy}
             className="border border-gray-300 rounded-full px-6 py-3.5 cursor-pointer text-md font-bold font-mono text-gray-700"
@@ -113,7 +114,6 @@ export default function Profile() {
             )}
           </div>
 
-          {/* Disconnect pill */}
           <button
             onClick={handleDisconnect}
             disabled={isDisconnecting}
@@ -136,7 +136,7 @@ export default function Profile() {
         <div className="mt-8 max-w-sm">
           <div className="flex items-center justify-center gap-2 rounded-xl shadow-md border border-gray-50 px-6 py-4 bg-white">
             <span className="text-3xl font-bold text-gray-800">
-              {userData.boltCreditAmount}
+              {formatNumber(userData.boltCreditAmount)}
             </span>
             <Image
               src="/profile/bolt-credit.png"
@@ -157,67 +157,43 @@ export default function Profile() {
 
         {/* Stats grid */}
         <div className="mt-8 grid grid-cols-2 gap-4 w-80 max-w-sm">
-          {/* Total Charge */}
           <div className="flex flex-col items-center justify-center rounded-2xl shadow-sm border border-gray-100 bg-white aspect-square">
-            <Image
-              src="/profile/total-charge.png"
-              alt="Total Charge"
-              width={40}
-              height={40}
-            />
+            <Image src="/profile/total-charge.png" alt="Total Charge" width={40} height={40} />
             <p className="mt-4 text-sm font-medium text-gray-700 text-center">
               Total Charge (kWh)
             </p>
             <span className="mt-1 text-lg font-bold text-gray-900">
-              {userData.totalChargeKWh}
+              {formatNumber(userData.totalChargeKWh)}
             </span>
           </div>
 
-          {/* Offset CO2 */}
           <div className="flex flex-col items-center justify-center rounded-2xl shadow-sm border border-gray-100 bg-white aspect-square">
-            <Image
-              src="/profile/co2.png"
-              alt="Offset CO2"
-              width={40}
-              height={40}
-            />
+            <Image src="/profile/co2.png" alt="Offset CO2" width={40} height={40} />
             <p className="mt-4 text-sm font-medium text-gray-700 text-center">
               Offset CO2 (kg)
             </p>
             <span className="mt-1 text-lg font-bold text-gray-900">
-              {userData.offsetCo2}
+              {formatNumber(userData.offsetCo2)}
             </span>
           </div>
 
-          {/* Invest */}
           <div className="flex flex-col items-center justify-center rounded-2xl shadow-sm border border-gray-100 bg-white aspect-square">
-            <Image
-              src="/profile/invest.png"
-              alt="Invest"
-              width={40}
-              height={40}
-            />
+            <Image src="/profile/invest.png" alt="Invest" width={40} height={40} />
             <p className="mt-4 text-sm font-medium text-gray-700 text-center">
               Invest (HBAR)
             </p>
             <span className="mt-1 text-lg font-bold text-gray-900">
-              {userData.totalInvestHbar}
+              {formatNumber(userData.totalInvestHbar)}
             </span>
           </div>
 
-          {/* Earnings */}
           <div className="flex flex-col items-center justify-center rounded-2xl shadow-sm border border-gray-100 bg-white aspect-square">
-            <Image
-              src="/profile/earning.png"
-              alt="Earnings"
-              width={40}
-              height={40}
-            />
+            <Image src="/profile/earning.png" alt="Earnings" width={40} height={40} />
             <p className="mt-4 text-sm font-medium text-gray-700 text-center">
               Earnings (HBAR)
             </p>
             <span className="mt-1 text-lg font-bold text-gray-900">
-              {userData.totalHbarEarnings}
+              {formatNumber(userData.totalHbarEarnings)}
             </span>
           </div>
         </div>
