@@ -1,5 +1,5 @@
 import Image from "next/image";
-import ConnectWalletButton from "./components/connectWalletButton";
+import ConnectWalletButton from "../components/connectWalletButton";
 
 export default function Home() {
   return (

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, DM_Sans } from "next/font/google";
 import "./globals.css";
 import "@rainbow-me/rainbowkit/styles.css";
-import WalletProvider from "./context/WalletProvider";
+import WalletProvider from "../context/WalletProvider";
 import { Toaster } from "react-hot-toast";
 
 const poppins = Poppins({

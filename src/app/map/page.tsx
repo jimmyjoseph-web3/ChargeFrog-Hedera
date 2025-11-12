@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import FloatingMenuBar from "../components/floatingMenuBar";
-import SelectionSlider from "../components/map/selectionSlider";
-import ActiveChargeReminder from "../components/map/activeChargeReminder";
+import FloatingMenuBar from "@/src/components/floatingMenuBar";
+import SelectionSlider from "@/src/components/map/selectionSlider";
+import ActiveChargeReminder from "@/src/components/map/activeChargeReminder";
 import {
   APIProvider,
   Map as VisMap,
