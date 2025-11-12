@@ -6,10 +6,36 @@ import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 
 // --- Bolt ABI (minimal) ---
 const boltAbi = [
-  "function approve(address spender, uint256 amount) external returns (bool)",
-  "function allowance(address owner, address spender) external view returns (uint256)",
-  "function spendBolt(uint256 stationId, uint256 amount) external",
-  "function balanceOf(address account) external view returns (uint256)",
+  {
+    inputs: [
+      { internalType: "address", name: "spender", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "approve",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "owner", type: "address" },
+      { internalType: "address", name: "spender", type: "address" },
+    ],
+    name: "allowance",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "stationId", type: "uint256" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "spendBolt",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ];
 
 type PressAndHoldToStopProps = {
@@ -89,10 +115,9 @@ export default function PressAndHoldToStop({
 
       try {
         // --- Compute amount in 18 decimals ---
-        const boltPerHBAR = 3;
         const decimals = 18;
         const amountToSpend = BigInt(
-          totalCreditSpend * boltPerHBAR * 10 ** decimals
+          totalCreditSpend * 10 ** decimals
         );
 
         // --- 1️⃣ Approve BOLT if needed ---
@@ -131,7 +156,7 @@ export default function PressAndHoldToStop({
         await fetch("/api/completeTx", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ walletAddress: address, txHash: spendTxHash }),
+          body: JSON.stringify({ walletAddress: address, txHash: spendTxHash, totalCreditSpend, totalKWhCharged }),
         });
 
         // === 4️⃣ Update stats ===

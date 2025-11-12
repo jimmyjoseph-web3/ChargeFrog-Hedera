@@ -32,7 +32,7 @@ export default function FullChargedDrawer({
   const [totalCreditSpend, setTotalCreditSpend] = useState<number>(0);
   const [isTxCompleted, setIsTxCompleted] = useState(false);
 
-  // Listen to activeCharge for totals
+  // Listen to activeCharge for totals & isTxCompleted
   useEffect(() => {
     if (!walletAddress) return;
 
@@ -53,7 +53,7 @@ export default function FullChargedDrawer({
   const shortened = shortenTxHash(txHash);
   const txUrl = `https://hashscan.io/testnet/transaction/${txHash}`;
 
-  // Remove activeCharge API call
+  // Remove activeCharge API
   const removeActiveCharge = async () => {
     if (!walletAddress) return;
     try {
@@ -67,18 +67,16 @@ export default function FullChargedDrawer({
     }
   };
 
+  // Handle Back button click
   const handleBack = async () => {
+    console.log("Close");
     await removeActiveCharge();
     onClose();
     router.push("/map");
   };
 
-  const handleOpenChange = async (isOpen: boolean) => {
-    if (!isOpen) await handleBack();
-  };
-
   return (
-    <Drawer open={open && isTxCompleted} onOpenChange={handleOpenChange}>
+    <Drawer open={open && isTxCompleted}>
       <DrawerContent className="w-full max-w-full px-4 border-none bg-white">
         <div className="mx-auto w-full max-w-md text-center pb-10">
           {/* Illustration */}

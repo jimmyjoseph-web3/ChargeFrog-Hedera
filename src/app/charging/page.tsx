@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { db } from "@/src/lib/firebaseClient";
-import { ref, onValue, off, DataSnapshot } from "firebase/database";
+import { ref, onValue, off, get, DataSnapshot } from "firebase/database";
 import FloatingMenuBar from "@/src/components/floatingMenuBar";
 import PressAndHoldToStop from "@/src/components/charging/pressAndHoldButton";
 import InfoBox from "@/src/components/charging/infoBox";
@@ -191,50 +191,25 @@ export default function ChargingPage() {
     };
   }, [activeCharge?.startTimestamp, kWhPerSec, creditPerKWh, timerRunning]);
 
-  // --- LISTEN FOR CHARGING STATUS CHANGES ---
   useEffect(() => {
-    if (!address) return;
+    if (!USER) return;
     const activeChargeRef = ref(db, `users/${USER}/activeCharge`);
 
     const listener = (snapshot: DataSnapshot) => {
       const data = snapshot.val();
+      if (!data) return;
 
       // Charging finished successfully
-      if (
-        data?.totalKWhCharged &&
-        data?.totalCreditSpend &&
-        data?.isTxCompleted
-      ) {
+      if (data.isTxCompleted) {
         setTimerRunning(false);
-        setDrawerOpen(true);
-        return;
-      }
-
-      // Charging paused/failed temporarily
-      if (
-        data?.totalKWhCharged &&
-        data?.totalCreditSpend &&
-        !data?.isTxCompleted
-      ) {
-        setTimerRunning(false);
-        return;
-      }
-
-      // Charging resumed
-      if (
-        !data?.totalKWhCharged &&
-        !data?.totalCreditSpend &&
-        data?.startTimestamp
-      ) {
-        setTimerRunning(true);
-        setDrawerOpen(false);
-        setActiveCharge(data);
+        setDrawerOpen(true); 
+        setTxHash(data.txHash ?? null); 
       }
     };
 
     onValue(activeChargeRef, listener);
     return () => off(activeChargeRef, "value", listener);
-  }, [address]);
+  }, [USER]);
 
   // --- RENDER LOADER ---
   if (loading || !hasActiveCharge || !station) {

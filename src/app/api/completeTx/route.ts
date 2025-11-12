@@ -3,7 +3,7 @@ import { db } from "@/src/lib/firebaseAdmin";
 
 export async function POST(request: Request) {
   try {
-    const { walletAddress } = await request.json();
+    const { walletAddress, totalCreditSpend, totalKWhCharged } = await request.json();
 
     if (!walletAddress) {
       return NextResponse.json(
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     // Update isTxCompleted to true
-    await activeChargeRef.update({ isTxCompleted: true });
+    await activeChargeRef.update({ isTxCompleted: true, totalCreditSpend, totalKWhCharged });
 
     return NextResponse.json({
       success: true,

@@ -3,11 +3,11 @@ import { db } from "@/src/lib/firebaseAdmin";
 
 export async function POST(request: Request) {
   try {
-    // Enable CORS for your external domain
-    const origin = request.headers.get("origin");
-    if (origin !== "https://chargefrog-control.vercel.app") {
-      return NextResponse.json({ error: "CORS not allowed" }, { status: 403 });
-    }
+    // // Enable CORS for your external domain
+    // const origin = request.headers.get("origin");
+    // if (origin !== "https://chargefrog-control.vercel.app") {
+    //   return NextResponse.json({ error: "CORS not allowed" }, { status: 403 });
+    // }
 
     const { walletAddress } = await request.json();
     if (!walletAddress) {
