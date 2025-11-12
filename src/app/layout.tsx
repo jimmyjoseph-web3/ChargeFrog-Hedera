@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Poppins, DM_Sans } from "next/font/google";
 import "./globals.css";
 import "@rainbow-me/rainbowkit/styles.css";
 import WalletProvider from "./context/WalletProvider";
+import { Toaster } from "react-hot-toast";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -27,8 +30,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${poppins.variable} ${dmSans.variable}`}
       >
+        <div>
+          <Toaster position="top-center" reverseOrder={false} />
+        </div>
         <WalletProvider>{children}</WalletProvider>
       </body>
     </html>
