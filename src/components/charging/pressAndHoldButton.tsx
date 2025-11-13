@@ -129,7 +129,7 @@ export default function PressAndHoldToStop({
         })) as bigint;
 
         if (allowance < amountToSpend) {
-          toast.loading("Approving BOLT...");
+          toast.loading("Approve your Bolt spending...");
           await walletClient.writeContract({
             address: boltAddressTyped,
             abi: boltAbi,
@@ -137,11 +137,11 @@ export default function PressAndHoldToStop({
             args: [boltAddressTyped, amountToSpend],
           });
           toast.dismiss();
-          toast.success("✅ BOLT approved");
+          toast.success("You had approved the spending!");
         }
 
         // --- 2️⃣ Spend BOLT ---
-        toast.loading("Spending BOLT...");
+        toast.loading("Payment processing...");
         const spendTxHash = await walletClient.writeContract({
           address: boltAddress,
           abi: boltAbi,
@@ -149,7 +149,7 @@ export default function PressAndHoldToStop({
           args: [stationId, amountToSpend],
         });
         toast.dismiss();
-        toast.success("✅ BOLT spent successfully!");
+        toast.success("BOLT Payment Success!");
 
         setSpendTx(spendTxHash);
 
@@ -175,7 +175,7 @@ export default function PressAndHoldToStop({
         if (onStop) onStop();
       } catch (error: any) {
         toast.dismiss();
-        console.error("❌ Spend failed:", error);
+        console.error("Payment failed:", error);
         toast.error(error?.message || "Transaction failed");
         setStatus("idle");
       }
