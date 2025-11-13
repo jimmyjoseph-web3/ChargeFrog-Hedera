@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import './App.css';
 import frogImg from '../assets/froggers.png';
 import deniedImg from '../assets/admin-froggers.png';
+
 import { SupportedWallets } from '@hashgraph/asset-tokenization-sdk';
+
 import { useWalletConnection } from './hooks/connectToMetaMask';
 import { useWalletStore } from './stores/useWalletStores';
 import {
@@ -13,11 +16,11 @@ import styles from './styles';
 import investorRequests from './data/investorRequests';
 import { useDropdownSection, useDropdownRow } from './components/dropdown';
 import StatusCard from './components/StatusCard';
+import FullScreenSpinner from './components/FullScreenSpinner';
 import { getRoles } from './adapters/getRoles';
 import { mintAssetHandler } from './adapters/mintAssetHandler';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 import { getBalanceOf } from './adapters/getBalanceOf';
-import { useState } from 'react';
 
 function App() {
   const [status, setStatus] = useState<string>('idle');
@@ -25,6 +28,25 @@ function App() {
   const [mintResults, setMintResults] = useState<string | null>(null); // State to store mint results
   const [roles, setRoles] = useState<string | null>(null); // State to store roles
   const [headerLoading, setHeaderLoading] = useState<boolean>(false); // Loading state for header button
+  const [pendingCount, setPendingCount] = useState<number>(0); // Global pending counter for overlay
+  const [pendingMessages, setPendingMessages] = useState<string[]>([]);
+  const beginPending = (message?: string) => {
+    setPendingCount((c) => c + 1);
+    if (message) setPendingMessages((arr) => [...arr, message]);
+  };
+  const endPending = () => {
+    setPendingCount((c) => Math.max(0, c - 1));
+    setPendingMessages((arr) => (arr.length ? arr.slice(0, -1) : arr));
+  };
+  const updateTopPendingMessage = (message: string) => {
+    setPendingMessages((arr) => {
+      if (arr.length === 0) return [message];
+      const copy = arr.slice();
+      copy[copy.length - 1] = message;
+      return copy;
+    });
+  };
+  const overlayVisible = pendingCount > 0;
   const { openSection, toggleSection } = useDropdownSection();
   const { expandedRows, toggleRow } = useDropdownRow(() => {
     setBalance(null); // Clear balance when toggling rows
@@ -36,47 +58,69 @@ function App() {
   const { handleConnectWallet } = useWalletConnection();
   const { connectionStatus, address, isAdmin } = useWalletStore();
   const isConnected = Boolean(address);
+  const currentPendingMessage =
+    pendingMessages[pendingMessages.length - 1] ||
+    (headerLoading
+      ? isConnected
+        ? 'Disconnecting...'
+        : 'Connecting...'
+      : 'Processing...');
   const disconnectMutation = useSDKDisconnectFromMetamask();
 
   // Define wallet event callbacks (simplified)
   const walletEvents = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    walletFound: (event: any) => console.log('SDK → Wallet found', event),
+    walletFound: (event: any) => {
+      console.log('SDK → Wallet found', event);
+      updateTopPendingMessage('Wallet found');
+    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    walletPaired: (event: any) => console.log('SDK → Wallet paired', event),
+    walletPaired: (event: any) => {
+      console.log('SDK → Wallet paired', event);
+      updateTopPendingMessage('Wallet paired');
+    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    walletConnectionStatusChanged: (event: any) =>
-      console.log('SDK → Wallet status changed', event),
+    walletConnectionStatusChanged: (event: any) => {
+      console.log('SDK → Wallet status changed', event);
+      updateTopPendingMessage('Wallet status changed');
+    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    walletDisconnect: (event: any) =>
-      console.log('SDK → Wallet disconnected', event),
+    walletDisconnect: (event: any) => {
+      console.log('SDK → Wallet disconnected', event);
+      updateTopPendingMessage('Wallet disconnected');
+    },
   };
 
   // Step 1: Initialise and Connect to MetaMask
   async function connectToMetamask() {
     try {
       setHeaderLoading(true);
+      beginPending('Initializing network...');
       setStatus('initializing...');
       // Actually call the mutation, passing event handlers
       await init(walletEvents);
       setStatus('initialized');
+      updateTopPendingMessage('Connecting to MetaMask...');
     } catch (err) {
       console.error('❌ Network init failed:', err);
       setStatus('error: ' + String(err));
+      updateTopPendingMessage('Initialization failed');
     }
-
     try {
       await handleConnectWallet(SupportedWallets.METAMASK);
     } catch (err) {
       console.error('❌ Failed to connect to MetaMask:', err);
+      updateTopPendingMessage('Wallet connection failed');
     } finally {
       setHeaderLoading(false);
+      endPending();
     }
   }
 
   // Disconnect handler: resets wallet store and clears UI state
   function handleDisconnect() {
     setHeaderLoading(true);
+    beginPending('Disconnecting...');
     disconnectMutation
       .mutateAsync()
       .then(() => {
@@ -89,33 +133,57 @@ function App() {
       .catch((err) => {
         console.error('❌ Failed to disconnect:', err);
       })
-      .finally(() => setHeaderLoading(false));
+      .finally(() => {
+        setHeaderLoading(false);
+        endPending();
+      });
   }
 
   const handleGetBalance = async () => {
-    const balance_res = await getBalanceOf();
-    console.log('Balance response:', balance_res); // Debugging log
-    if (balance_res && typeof balance_res === 'string') {
-      setBalance(balance_res); // Update state with balance
+    beginPending('Fetching balance...');
+    try {
+      const balance_res = await getBalanceOf();
+      console.log('Balance response:', balance_res); // Debugging log
+      if (balance_res && typeof balance_res === 'string') {
+        setBalance(balance_res); // Update state with balance
+      }
+    } finally {
+      endPending();
     }
   };
 
   const handleMintAsset = async () => {
-    const mint_res = await mintAssetHandler();
-    if (mint_res && typeof mint_res === 'string') {
-      setMintResults(mint_res); // Update state with mint results
+    beginPending('Preparing mint & transfer...');
+    try {
+      const mint_res = await mintAssetHandler({
+        onProgress: (msg) => updateTopPendingMessage(msg),
+      });
+      if (mint_res && typeof mint_res === 'string') {
+        setMintResults(mint_res); // Update state with mint results
+      }
+    } finally {
+      endPending();
     }
   };
 
   const handleGetRoles = async () => {
-    const roles_res = await getRoles();
-    if (roles_res && typeof roles_res === 'string') {
-      setRoles(roles_res); // Update state with roles
+    beginPending('Fetching roles...');
+    try {
+      const roles_res = await getRoles();
+      if (roles_res && typeof roles_res === 'string') {
+        setRoles(roles_res); // Update state with roles
+      }
+    } finally {
+      endPending();
     }
-  }; 
+  };
 
   return (
     <div style={styles.container}>
+      <FullScreenSpinner
+        visible={overlayVisible}
+        message={currentPendingMessage}
+      />
       <div
         style={{
           background: '#fff',
@@ -127,7 +195,7 @@ function App() {
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center', 
+            alignItems: 'center',
           }}
         >
           <h1 style={styles.title}>
@@ -142,17 +210,52 @@ function App() {
               cursor: headerLoading ? 'not-allowed' : 'pointer',
               transition: 'background-color 0.2s ease',
             }}
-            onMouseEnter={(e) => {
-              if (headerLoading) return;
-              e.currentTarget.style.backgroundColor = isConnected
-                ? '#e74c3c'
-                : '#2ecc71';
-            }}
-            onMouseLeave={(e) => {
-              if (headerLoading) return;
-              e.currentTarget.style.backgroundColor = '';
-            }}
+            aria-busy={headerLoading}
+
+
+
+
+
+
+
+
+
           >
+            {headerLoading && (
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                style={{ marginRight: 8, verticalAlign: 'text-bottom' }}
+                aria-hidden="true"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  fill="none"
+                  opacity="0.25"
+                />
+                <path
+                  d="M22 12a10 10 0 0 1-10 10"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+                <animateTransform
+                  attributeName="transform"
+                  attributeType="XML"
+                  type="rotate"
+                  from="0 12 12"
+                  to="360 12 12"
+                  dur="1s"
+                  repeatCount="indefinite"
+                />
+              </svg>
+            )}
             {headerLoading
               ? isConnected
                 ? 'Disconnecting...'
@@ -366,6 +469,6 @@ function App() {
       </div>
     </div>
   );
-
 }
+
 export default App;
