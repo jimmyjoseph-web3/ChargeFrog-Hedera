@@ -11,8 +11,8 @@ type WalletStoreStatus =
 
 interface WalletStore {
   address: string;
-
-
+  isAdmin: boolean;
+  setIsAdmin: (isAdmin: boolean) => void;
   setAddress: (address: string) => void;
   connectionStatus: WalletStoreStatus;
   setConnectionStatus: (status: WalletStoreStatus) => void;
@@ -24,15 +24,15 @@ interface WalletStore {
 
 export const useWalletStore = create<WalletStore>((set) => ({
   address: '',
-
+  isAdmin: false,
   setAddress: (address: string) =>
     set((state: WalletStore) => ({
       ...state,
       address,
       connectionStatus: WalletStatus.connected,
     })),
-
-
+  setIsAdmin: (isAdmin: boolean) =>
+    set((state: WalletStore) => ({ ...state, isAdmin })),
   connectionStatus: WalletStatus.disconnected,
   setConnectionStatus: (status: WalletStoreStatus) =>
     set((state: WalletStore) => ({ ...state, connectionStatus: status })),
@@ -40,7 +40,7 @@ export const useWalletStore = create<WalletStore>((set) => ({
     set((state: WalletStore) => ({
       ...state,
       address: '',
-
+      isAdmin: false,
       data: null,
       network: null,
       connectionStatus: WalletStatus.disconnected,
