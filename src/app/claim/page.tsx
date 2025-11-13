@@ -9,7 +9,7 @@ import ProposalCard from "@/src/components/claim/proposalCard";
 import ClaimSuccessDrawer from "@/src/components/claim/claimSuccessDrawer";
 import ClaimNothingDrawer from "@/src/components/claim/claimNothingDrawer";
 import { db } from "@/src/lib/firebaseClient";
-import { ref, onValue, off, DataSnapshot } from "firebase/database";
+import { ref, onValue, off } from "firebase/database";
 import {
   useAccount,
   useWriteContract,
@@ -32,6 +32,9 @@ const STATION_ABI = parseAbi([
 
 const INITIAL_BUTTON_STATE = { text: "Check and claim", disabled: false };
 
+// ---- Token decimals ----
+const TOKEN_DECIMALS = 8;
+
 // ===== TYPES =====
 interface ProposalData {
   stationLocation: string;
@@ -48,6 +51,25 @@ interface ProposalData {
 function formatLocalDMY(y: number, m: number, d: number) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(d)}/${pad(m)}/${y}`;
+}
+
+/**
+ * Convert on-chain integer (uint256) into human HBAR value using TOKEN_DECIMALS.
+ * Accepts bigint, number, or string-style hex/decimal.
+ */
+function fromTokenUnits(value: bigint | number | string): number {
+  try {
+    const bi =
+      typeof value === "bigint"
+        ? value
+        : // viem may return BigInt or a string/number; ensure BigInt conversion
+          BigInt(String(value));
+    // safe conversion — for typical balances this will fit into Number for UI display
+    return Number(bi) / Math.pow(10, TOKEN_DECIMALS);
+  } catch (e) {
+    console.error("Failed to parse token units:", value, e);
+    return 0;
+  }
 }
 
 // ===== COMPONENT =====
@@ -69,7 +91,7 @@ export default function Claim() {
     undefined
   );
 
-  // Watch transaction receipt for the current txHash
+  // Watch transaction receipt
   const { data: receipt, isSuccess } = useWaitForTransactionReceipt({
     hash: currentTxHash as `0x${string}`,
   });
@@ -141,28 +163,34 @@ export default function Claim() {
     if (!receipt || !isSuccess) return;
 
     try {
-      const claimedEvent = receipt.logs
-        .map((log) => {
+      // Loop through all logs and decode every Claimed event
+      const decodedEvents = receipt.logs
+        .map((log, i) => {
           try {
-            return decodeEventLog({
+            const decoded = decodeEventLog({
               abi: STATION_ABI,
               data: log.data,
               topics: log.topics,
             });
+            console.log(`Decoded log [${i}]`, decoded);
+            return decoded;
           } catch {
+            console.log(`Skipped non-station log [${i}]`);
             return null;
           }
         })
-        .find((e) => e?.eventName === "Claimed");
+        .filter((e) => e?.eventName === "Claimed");
 
-      if (!claimedEvent) {
+      if (!decodedEvents.length) {
         setNothingDrawerOpen(true);
         toast.error("Nothing to claim at this time.");
         return;
       }
 
-      const claimedAmt =
-        Number((claimedEvent as any).args.claimedAmount) / 1e18;
+      // Take the first Claimed event (or merge if multiple)
+      const event = decodedEvents[0] as any;
+      const claimedAmt = fromTokenUnits(event.args.claimedAmount);
+
       setClaimedAmount(claimedAmt);
       setClaimedTxHash(currentTxHash ?? "");
       setSuccessDrawerOpen(true);
@@ -173,12 +201,12 @@ export default function Claim() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           walletAddress: address,
-          stationId: (claimedEvent as any).args.stationId,
+          stationId: event.args.stationId,
           claimedAmount: claimedAmt,
         }),
       });
 
-      toast.success(`Claimed ${claimedAmt.toFixed(2)} HBAR successfully!`);
+      toast.success(`Claimed ${claimedAmt.toFixed(6)} HBAR successfully!`);
     } catch (err) {
       console.error("Failed to process claim receipt", err);
     }
@@ -194,7 +222,6 @@ export default function Claim() {
     try {
       toast.loading("Checking and claiming rewards...");
 
-      // This will throw if the tx reverts
       const txHash = await writeContractAsync({
         address: contractAddress,
         abi: STATION_ABI,
@@ -202,36 +229,40 @@ export default function Claim() {
         account: address,
       });
 
-      // If it didn’t revert, wait for receipt
+      setCurrentTxHash(txHash);
+
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: txHash,
       });
+
       toast.dismiss();
 
-      // Decode Claimed event
-      const claimedEvent = receipt.logs
-        .map((log) => {
+      // Loop + decode all Claimed events
+      const decodedEvents = receipt.logs
+        .map((log, i) => {
           try {
-            return decodeEventLog({
+            const decoded = decodeEventLog({
               abi: STATION_ABI,
               data: log.data,
               topics: log.topics,
             });
+            console.log(`Decoded log [${i}]`, decoded);
+            return decoded;
           } catch {
+            console.log(`Skipped non-station log [${i}]`);
             return null;
           }
         })
-        .find((e) => e?.eventName === "Claimed");
+        .filter((e) => e?.eventName === "Claimed");
 
-      if (!claimedEvent) {
+      if (!decodedEvents.length) {
         setNothingDrawerOpen(true);
         return toast.error("Nothing to claim at this time.");
       }
 
-      const claimedAmt =
-        Number((claimedEvent as any).args.claimedAmount) / 1e18;
+      const event = decodedEvents[0] as any;
+      const claimedAmt = fromTokenUnits(event.args.claimedAmount);
 
-      // Update Firebase
       await fetch("/api/updateAfterClaim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -245,18 +276,15 @@ export default function Claim() {
       setClaimedAmount(claimedAmt);
       setClaimedTxHash(txHash);
       setSuccessDrawerOpen(true);
-      toast.success(`Claimed ${claimedAmt.toFixed(2)} HBAR successfully!`);
+      toast.success(`Claimed ${claimedAmt.toFixed(6)} HBAR successfully!`);
     } catch (err: any) {
       toast.dismiss();
       console.error("Claim failed:", err);
-
-      // Handle revert immediately
+      setNothingDrawerOpen(true);
       if (err.message?.includes("NothingToClaim")) {
-        setNothingDrawerOpen(true);
         toast.error("Nothing to claim yet.");
       } else {
         toast.error("Transaction failed or reverted.");
-        setNothingDrawerOpen(true);
       }
     }
   };
