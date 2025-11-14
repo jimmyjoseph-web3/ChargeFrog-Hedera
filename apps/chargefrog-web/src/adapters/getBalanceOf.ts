@@ -1,14 +1,13 @@
-
 import { GetAccountBalanceRequest } from '@hashgraph/asset-tokenization-sdk';
 import { SDKService as sdk } from '../services/SDKService';
 
 /**
  * Fetches the balance of a tokenized asset.
  */
-export async function getBalanceOf() {
+export async function getBalanceOf(targetId: string) {
   const balance_req = new GetAccountBalanceRequest({
-    securityId: '0.0.7169251',
-    targetId: '0.0.7098424',
+    securityId: import.meta.env.VITE_SECURITY_CONTRACT_ID ?? '',
+    targetId,
   });
 
   const balance_res = await sdk.getBalanceOf(balance_req); // Balance of tokenized asset

@@ -4,10 +4,10 @@ import { SDKService as sdk } from '../services/SDKService';
 /**
  * Fetch roles for a specific diamond contract.
  */
-export async function getRoles() {
+export async function getRoles(targetId: string) {
   const RolesReq = new GetRolesForRequest({
-    securityId: '0.0.7169251',
-    targetId: '0.0.7106098',
+    securityId: import.meta.env.VITE_SECURITY_CONTRACT_ID ?? '',
+    targetId,
     start: 0,
     end: 10,
   });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 import frogImg from '../assets/froggers.png';
 import deniedImg from '../assets/admin-froggers.png';
@@ -13,14 +13,21 @@ import {
 } from './hooks/queries/SDKConnection';
 
 import styles from './styles';
-import investorRequests from './data/investorRequests';
+import { getInvestorRequests } from './data/investorRequests';
 import { useDropdownSection, useDropdownRow } from './components/dropdown';
 import StatusCard from './components/StatusCard';
 import FullScreenSpinner from './components/FullScreenSpinner';
 import { getRoles } from './adapters/getRoles';
 import { mintAssetHandler } from './adapters/mintAssetHandler';
-
 import { getBalanceOf } from './adapters/getBalanceOf';
+
+type InvestorRow = {
+  id: number;
+  walletAddr: string;
+  station: string;
+  shares: number;
+  time: string;
+};
 
 function App() {
   const [status, setStatus] = useState<string>('idle');
@@ -28,6 +35,7 @@ function App() {
   const [mintResults, setMintResults] = useState<string | null>(null); // State to store mint results
   const [roles, setRoles] = useState<string | null>(null); // State to store roles
   const [headerLoading, setHeaderLoading] = useState<boolean>(false); // Loading state for header button
+  const [investorRequests, setInvestorRequests] = useState<InvestorRow[]>([]);
   const [pendingCount, setPendingCount] = useState<number>(0); // Global pending counter for overlay
   const [pendingMessages, setPendingMessages] = useState<string[]>([]);
   const beginPending = (message?: string) => {
@@ -67,26 +75,41 @@ function App() {
       : 'Processing...');
   const disconnectMutation = useSDKDisconnectFromMetamask();
 
+  // Load investor requests from API on mount
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      beginPending('Loading investor requests...');
+      try {
+        const rows = await getInvestorRequests();
+        if (mounted) setInvestorRequests(rows);
+      } catch (err) {
+        console.error('Failed to load investor requests', err);
+      } finally {
+        endPending();
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Define wallet event callbacks (simplified)
   const walletEvents = {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    walletFound: (event: any) => {
-      console.log('SDK → Wallet found', event);
+    walletFound: () => {
       updateTopPendingMessage('Wallet found');
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    walletPaired: (event: any) => {
-      console.log('SDK → Wallet paired', event);
+
+    walletPaired: () => {
       updateTopPendingMessage('Wallet paired');
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    walletConnectionStatusChanged: (event: any) => {
-      console.log('SDK → Wallet status changed', event);
+
+    walletConnectionStatusChanged: () => {
       updateTopPendingMessage('Wallet status changed');
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    walletDisconnect: (event: any) => {
-      console.log('SDK → Wallet disconnected', event);
+
+    walletDisconnect: () => {
       updateTopPendingMessage('Wallet disconnected');
     },
   };
@@ -139,11 +162,11 @@ function App() {
       });
   }
 
-  const handleGetBalance = async () => {
-    beginPending('Fetching balance...');
+  const handleGetBalance = async (wallet: string) => {
+    beginPending(`Fetching balance for ${wallet}...`);
     try {
-      const balance_res = await getBalanceOf();
-      console.log('Balance response:', balance_res); // Debugging log
+      const balance_res = await getBalanceOf(wallet);
+
       if (balance_res && typeof balance_res === 'string') {
         setBalance(balance_res); // Update state with balance
       }
@@ -152,26 +175,30 @@ function App() {
     }
   };
 
-  const handleMintAsset = async () => {
-    beginPending('Preparing mint & transfer...');
+  const handleMintAsset = async (wallet: string, shares: number) => {
+    beginPending(`Minting for ${wallet}...`);
     try {
-      const mint_res = await mintAssetHandler({
+      const mint_res = await mintAssetHandler(wallet, {
         onProgress: (msg) => updateTopPendingMessage(msg),
+        transferAmount: shares,
+        receiverId: wallet,
       });
       if (mint_res && typeof mint_res === 'string') {
-        setMintResults(mint_res); // Update state with mint results
+        // Format so that each comma is followed by a newline for readability
+        setMintResults(mint_res.replace(/,/g, ',\n'));
       }
     } finally {
       endPending();
     }
   };
 
-  const handleGetRoles = async () => {
-    beginPending('Fetching roles...');
+  const handleGetRoles = async (wallet: string) => {
+    beginPending(`Fetching roles for ${wallet}...`);
     try {
-      const roles_res = await getRoles();
+      const roles_res = await getRoles(wallet);
       if (roles_res && typeof roles_res === 'string') {
-        setRoles(roles_res); // Update state with roles
+        // Insert a newline after every comma for readability
+        setRoles(roles_res.replace(/,/g, ',\n')); // Update state with roles
       }
     } finally {
       endPending();
@@ -211,15 +238,6 @@ function App() {
               transition: 'background-color 0.2s ease',
             }}
             aria-busy={headerLoading}
-
-
-
-
-
-
-
-
-
           >
             {headerLoading && (
               <svg
@@ -351,7 +369,7 @@ function App() {
                             {expandedRows[row.id] ? 'Hide' : 'Details'}
                           </button>
                         </td>
-                        <td>{row.wallet}</td>
+                        <td>{row.walletAddr}</td>
                         <td>{row.station}</td>
                         <td>{row.shares}</td>
                         <td>{row.time}</td>
@@ -385,7 +403,14 @@ function App() {
                                   }}
                                 >
                                   <h3>Mint Results</h3>
-                                  <p>{mintResults}</p>
+                                  <pre
+                                    style={{
+                                      whiteSpace: 'pre-wrap',
+                                      margin: 0,
+                                    }}
+                                  >
+                                    {mintResults}
+                                  </pre>
                                 </div>
                               )}
                               {roles && (
@@ -399,28 +424,39 @@ function App() {
                                   }}
                                 >
                                   <h3>Roles</h3>
-                                  <p>{roles}</p>
+                                  <pre
+                                    style={{
+                                      whiteSpace: 'pre-wrap',
+                                      margin: 0,
+                                    }}
+                                  >
+                                    {roles}
+                                  </pre>
                                 </div>
                               )}
                               <div style={styles.detailActions}>
                                 <button
                                   className="app-button"
                                   style={styles.primaryBtn}
-                                  onClick={handleMintAsset}
+                                  onClick={() =>
+                                    handleMintAsset(row.walletAddr, row.shares)
+                                  }
                                 >
                                   Approve Mint and Transfer Tokens
                                 </button>
                                 <button
                                   className="app-button"
                                   style={styles.secondaryBtn}
-                                  onClick={handleGetRoles}
+                                  onClick={() => handleGetRoles(row.walletAddr)}
                                 >
                                   Get Roles
                                 </button>
                                 <button
                                   className="app-button"
                                   style={styles.secondaryBtn}
-                                  onClick={handleGetBalance}
+                                  onClick={() =>
+                                    handleGetBalance(row.walletAddr)
+                                  }
                                 >
                                   Get Balance
                                 </button>

@@ -1,27 +1,36 @@
 import {
   IssueRequest,
-  RoleRequest,
-  ApplyRolesRequest,
   TransferRequest,
 } from '@hashgraph/asset-tokenization-sdk';
 import { SDKService as sdk } from '../services/SDKService';
-import { SecurityRole } from '../utils/SecurityRole';
 
 /**
  * Handles minting assets and transferring tokens.
  */
 type MintAssetHandlerOptions = {
   onProgress?: (message: string) => void;
+  receiverId?: string; // optional separate receiver; if omitted, skips transfer
+  transferAmount?: number; // optional amount to transfer (e.g., requestedShares)
 };
 
-export async function mintAssetHandler(options?: MintAssetHandlerOptions) {
+export async function mintAssetHandler(
+  _targetId: string,
+  options?: MintAssetHandlerOptions,
+) {
   try {
     const onProgress = options?.onProgress;
-    // ✅ 1 — APPLY ROLES FIRST
-    const roles = [SecurityRole._ISSUER_ROLE, SecurityRole._AGENT_ROLE];
-    const target = '0.0.7106098'; // admin account
-    const security = '0.0.7169251'; // security contract
+    // 1 — APPLY ROLES FIRST
+    const security = import.meta.env.VITE_SECURITY_CONTRACT_ID ?? ''; // security contract
+    // Share the same amount string for mint and optional transfer
+    const amountStr =
+      options?.transferAmount !== undefined
+        ? String(options.transferAmount)
+        : '0.0';
 
+    /*
+    This was commented out because admins have already been given the issuer and agent roles.
+
+    const roles = [SecurityRole._ISSUER_ROLE, SecurityRole._AGENT_ROLE];
     onProgress?.('Applying roles (issuer, agent)...');
     const admin_role_req = new ApplyRolesRequest({
       targetId: target,
@@ -36,6 +45,7 @@ export async function mintAssetHandler(options?: MintAssetHandlerOptions) {
       onProgress?.('ApplyRolesRequest sent');
     }
 
+    Roles have already been granted
     const grantRoleRes = [];
     for (const role of roles) {
       onProgress?.(`Granting role ${role}...`);
@@ -53,16 +63,17 @@ export async function mintAssetHandler(options?: MintAssetHandlerOptions) {
 
     console.log('✅ Roles applied & granted');
     onProgress?.('Roles applied & granted');
+    */
 
-    // ✅ 2 — MINT CREDIT/EQUITY FIRST
+    // 2 — MINT CREDIT/EQUITY TO TARGET
     const mintReq = new IssueRequest({
       securityId: security,
-      targetId: target,
-      amount: '50.0',
+      // IMPORTANT: per requirement, do not change this targetId
+      targetId: '0.0.7106098',
+      amount: amountStr,
     });
 
-    console.log('🚀 Minting asset:', mintReq);
-    onProgress?.('Minting 50.0 tokens to target...');
+    onProgress?.(`Minting ${amountStr} tokens to target...`);
 
     const mintResult = await sdk.mint(mintReq);
 
@@ -72,22 +83,21 @@ export async function mintAssetHandler(options?: MintAssetHandlerOptions) {
       return;
     }
 
-    console.log('✅ Mint successful:', mintResult);
     onProgress?.('Mint successful');
 
-    // ✅ 3 — TRANSFER AFTER SUCCESSFUL MINT
-    const transReq = new TransferRequest({
-      targetId: '0.0.7098424', // receiver
-      amount: '10.0',
-      securityId: security,
-    });
-
-    onProgress?.('Transferring 10.0 tokens to receiver...');
-    const transferRes = await sdk.transfer(transReq);
-
-    if (transferRes) {
-      console.log('✅ Transfer completed:', transferRes);
-      onProgress?.('Transfer completed');
+    // 3 — Transfer after mint
+    let transferRes: unknown = null;
+    if (options?.receiverId) {
+      const transReq = new TransferRequest({
+        targetId: options.receiverId,
+        amount: amountStr,
+        securityId: security,
+      });
+      onProgress?.(`Transferring ${amountStr} tokens to receiver...`);
+      transferRes = await sdk.transfer(transReq);
+      if (transferRes) {
+        onProgress?.('Transfer completed');
+      }
     }
 
     return JSON.stringify({ mintResult, transferRes });

@@ -29,13 +29,11 @@ export const useSDKConnectToWallet = () => {
   return useMutation({
     mutationFn: (wallet: SupportedWallets) => SDKService.connectWallet(wallet),
     onSuccess: async (data) => {
-      console.log('✅ Connected to wallet:', data);
-
       setConnectionStatus(WalletStatus.connected);
       setAddress(data.account?.id?.toString() || '');
 
       const RolesReq = new GetRolesForRequest({
-        securityId: '0.0.7169251',
+        securityId: import.meta.env.VITE_SECURITY_CONTRACT_ID ?? '',
         targetId: data.account?.id?.toString() || '',
         start: 0,
         end: 10,
@@ -49,7 +47,6 @@ export const useSDKConnectToWallet = () => {
           (role: string) => role === SecurityRole._DEFAULT_ADMIN_ROLE,
         );
 
-      console.log('🛡️ Is Admin:', isAdmin);
       setIsAdmin(Boolean(isAdmin));
     },
     onError: (error) => {

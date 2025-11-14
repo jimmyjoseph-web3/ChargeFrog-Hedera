@@ -234,8 +234,6 @@ export class SDKService {
         method: 'eth_requestAccounts',
       });
       evmAddress = accounts[0];
-
-      console.log('🦊 MetaMask EVM address:', evmAddress);
     }
 
     // 2️⃣ Convert the EVM address into Hedera account ID (if available on mirror node)
@@ -247,7 +245,6 @@ export class SDKService {
 
       if (data?.account) {
         hederaAccountId = data.account;
-        console.log('✅ Found Hedera Account ID:', hederaAccountId);
       } else {
         console.warn(
           '⚠️ No Hedera account found for this EVM address — new user?',
@@ -270,7 +267,6 @@ export class SDKService {
     });
 
     this.initData = await Network.connect(connectReq);
-    console.log('🎉 Connected successfully', this.initData);
 
     return this.initData;
   }
