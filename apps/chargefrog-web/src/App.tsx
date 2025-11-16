@@ -25,7 +25,7 @@ import {
   createMajesticLabsEquity,
   createMountAustinEquity,
   createEcoMajesticEquity,
-} from './adapters/createEquity.ts';
+} from './adapters/createEquity';
 
 type InvestorRow = {
   id: number;
@@ -377,7 +377,7 @@ function App() {
                 >
                   &gt;
                 </span>
-                <span>Investor</span>
+                <span>Admin</span>
               </div>
               {openSection === 'admin' && (
                 <div className="section-body">
@@ -400,7 +400,7 @@ function App() {
                       (e.currentTarget.style.backgroundColor = '#f0f0f0')
                     }
                   >
-                    Requests
+                    Equity
                   </div>
                 </div>
               )}
@@ -412,7 +412,7 @@ function App() {
         {isAdmin ? (
           <div style={{ display: 'flex', flexDirection: 'row', gap: '20px' }}>
             <div style={{ flex: 1 }}>
-              <h2 style={{ marginBottom: 12 }}>Investor Requests</h2>
+              <h2 style={{ marginBottom: 12 }}>Equity Investment Requests</h2>
               <table style={styles.table}>
                 <thead>
                   <tr>
@@ -561,7 +561,7 @@ function App() {
               </table>
               {/* Equity Creation — Dropdown Table */}
               <div style={{ marginTop: 40 }}>
-                <h2 style={{ marginBottom: 12 }}>Create Equity Tokens</h2>
+                <h2 style={{ marginBottom: 12 }}>Equity Token Creation</h2>
                 <table style={styles.table}>
                   <thead>
                     <tr>
