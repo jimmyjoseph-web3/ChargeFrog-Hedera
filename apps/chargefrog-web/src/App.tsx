@@ -20,10 +20,17 @@ import FullScreenSpinner from './components/FullScreenSpinner';
 import { getRoles } from './adapters/getRoles';
 import { mintAssetHandler } from './adapters/mintAssetHandler';
 import { getBalanceOf } from './adapters/getBalanceOf';
+import {
+  createNottinghamEquity,
+  createMajesticLabsEquity,
+  createMountAustinEquity,
+  createEcoMajesticEquity,
+} from './adapters/createEquity.ts';
 
 type InvestorRow = {
   id: number;
   walletAddr: string;
+  stationId: number;
   station: string;
   shares: number;
   time: string;
@@ -38,6 +45,7 @@ function App() {
   const [investorRequests, setInvestorRequests] = useState<InvestorRow[]>([]);
   const [pendingCount, setPendingCount] = useState<number>(0); // Global pending counter for overlay
   const [pendingMessages, setPendingMessages] = useState<string[]>([]);
+  const [equityResult, setEquityResult] = useState<string | null>(null);
   const beginPending = (message?: string) => {
     setPendingCount((c) => c + 1);
     if (message) setPendingMessages((arr) => [...arr, message]);
@@ -61,6 +69,11 @@ function App() {
     setMintResults(null); // Clear mint results when toggling rows
     setRoles(null); // Clear roles when toggling rows
   });
+  // Separate dropdown state for Equity rows
+  const { expandedRows: equityExpandedRows, toggleRow: toggleEquityRow } =
+    useDropdownRow(() => {
+      setEquityResult(null);
+    });
 
   const { mutate: init } = useSDKInit();
   const { handleConnectWallet } = useWalletConnection();
@@ -74,6 +87,13 @@ function App() {
         : 'Connecting...'
       : 'Processing...');
   const disconnectMutation = useSDKDisconnectFromMetamask();
+
+  // Fallback resolver in case some rows are missing stationId
+  const resolveStationId = (row: InvestorRow): number => {
+    if (Number.isFinite(row.stationId)) return row.stationId;
+    const parsed = parseInt((row.station || '').split(' - ')[0], 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
 
   // Load investor requests from API on mount
   useEffect(() => {
@@ -162,11 +182,10 @@ function App() {
       });
   }
 
-  const handleGetBalance = async (wallet: string) => {
-    beginPending(`Fetching balance for ${wallet}...`);
+  const handleGetBalance = async (wallet: string, stationId: number) => {
+    beginPending(`Fetching balance for ${wallet} (station ${stationId})...`);
     try {
-      const balance_res = await getBalanceOf(wallet);
-
+      const balance_res = await getBalanceOf(wallet, stationId);
       if (balance_res && typeof balance_res === 'string') {
         setBalance(balance_res); // Update state with balance
       }
@@ -175,10 +194,14 @@ function App() {
     }
   };
 
-  const handleMintAsset = async (wallet: string, shares: number) => {
-    beginPending(`Minting for ${wallet}...`);
+  const handleMintAsset = async (
+    wallet: string,
+    shares: number,
+    stationId: number,
+  ) => {
+    beginPending(`Minting for ${wallet} (station ${stationId})...`);
     try {
-      const mint_res = await mintAssetHandler(wallet, {
+      const mint_res = await mintAssetHandler(wallet, stationId, {
         onProgress: (msg) => updateTopPendingMessage(msg),
         transferAmount: shares,
         receiverId: wallet,
@@ -192,13 +215,68 @@ function App() {
     }
   };
 
-  const handleGetRoles = async (wallet: string) => {
-    beginPending(`Fetching roles for ${wallet}...`);
+  const handleGetRoles = async (wallet: string, stationId: number) => {
+    beginPending(`Fetching roles for ${wallet} (station ${stationId})...`);
     try {
-      const roles_res = await getRoles(wallet);
+      const roles_res = await getRoles(wallet, stationId);
       if (roles_res && typeof roles_res === 'string') {
         // Insert a newline after every comma for readability
         setRoles(roles_res.replace(/,/g, ',\n')); // Update state with roles
+      }
+    } finally {
+      endPending();
+    }
+  };
+
+  // Config for equity creation rows
+  const equityRows: Array<{
+    id: number;
+    label: string;
+    description: string;
+    onClick: () => Promise<string | null>;
+  }> = [
+    {
+      id: 1001,
+      label: 'Nottingham',
+      description: 'ChargeFrog-Notts equity token for Nottingham station',
+      onClick: createNottinghamEquity,
+    },
+    {
+      id: 1002,
+      label: 'MajesticLabs',
+      description:
+        'ChargeFrog-MajesticLabs equity token for MajesticLabs station',
+      onClick: createMajesticLabsEquity,
+    },
+    {
+      id: 1003,
+      label: 'Mount Austin',
+      description:
+        'ChargeFrog-MountAustin equity token for Mount Austin station',
+      onClick: createMountAustinEquity,
+    },
+    {
+      id: 1004,
+      label: 'EcoMajestic',
+      description:
+        'ChargeFrog-EcoMajestic equity token for EcoMajestic station',
+      onClick: createEcoMajesticEquity,
+    },
+  ];
+
+  const handleCreateEquity = async (row: {
+    id: number;
+    label: string;
+    description: string;
+    onClick: () => Promise<string | null>;
+  }) => {
+    beginPending(`Creating ${row.label} equity...`);
+    try {
+      const res = await row.onClick();
+      if (typeof res === 'string') {
+        setEquityResult(res);
+      } else {
+        setEquityResult('No result returned.');
       }
     } finally {
       endPending();
@@ -439,7 +517,11 @@ function App() {
                                   className="app-button"
                                   style={styles.primaryBtn}
                                   onClick={() =>
-                                    handleMintAsset(row.walletAddr, row.shares)
+                                    handleMintAsset(
+                                      row.walletAddr,
+                                      row.shares,
+                                      resolveStationId(row),
+                                    )
                                   }
                                 >
                                   Approve Mint and Transfer Tokens
@@ -447,7 +529,12 @@ function App() {
                                 <button
                                   className="app-button"
                                   style={styles.secondaryBtn}
-                                  onClick={() => handleGetRoles(row.walletAddr)}
+                                  onClick={() =>
+                                    handleGetRoles(
+                                      row.walletAddr,
+                                      resolveStationId(row),
+                                    )
+                                  }
                                 >
                                   Get Roles
                                 </button>
@@ -455,7 +542,10 @@ function App() {
                                   className="app-button"
                                   style={styles.secondaryBtn}
                                   onClick={() =>
-                                    handleGetBalance(row.walletAddr)
+                                    handleGetBalance(
+                                      row.walletAddr,
+                                      resolveStationId(row),
+                                    )
                                   }
                                 >
                                   Get Balance
@@ -469,6 +559,92 @@ function App() {
                   ))}
                 </tbody>
               </table>
+              {/* Equity Creation — Dropdown Table */}
+              <div style={{ marginTop: 40 }}>
+                <h2 style={{ marginBottom: 12 }}>Create Equity Tokens</h2>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 120 }}>Actions</th>
+                      <th>Station Name</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {equityRows.map((row) => (
+                      <>
+                        <tr key={row.id}>
+                          <td style={styles.actionsCell}>
+                            <button
+                              onClick={() => toggleEquityRow(row.id)}
+                              style={styles.dropdownButton}
+                            >
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  transform: equityExpandedRows[row.id]
+                                    ? 'rotate(90deg)'
+                                    : 'rotate(0deg)',
+                                  transition: 'transform 0.15s ease',
+                                  marginRight: 8,
+                                }}
+                              >
+                                ▶
+                              </span>
+                              {equityExpandedRows[row.id] ? 'Hide' : 'Details'}
+                            </button>
+                          </td>
+                          <td>{row.label}</td>
+                          <td>{row.description}</td>
+                        </tr>
+                        {equityExpandedRows[row.id] && (
+                          <tr key={`${row.id}-details`}>
+                            <td colSpan={3} style={{ padding: 0 }}>
+                              <div style={styles.detailCard}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 12,
+                                  }}
+                                >
+                                  {equityResult && (
+                                    <div
+                                      style={{
+                                        border: '1px solid #ddd',
+                                        padding: '10px',
+                                        borderRadius: '5px',
+                                        backgroundColor: '#f9f9f9',
+                                      }}
+                                    >
+                                      <h3 style={{ marginTop: 0 }}>Result</h3>
+                                      <pre
+                                        style={{
+                                          whiteSpace: 'pre-wrap',
+                                          margin: 0,
+                                        }}
+                                      >
+                                        {equityResult}
+                                      </pre>
+                                    </div>
+                                  )}
+                                  <button
+                                    className="app-button"
+                                    style={styles.secondaryBtn}
+                                    onClick={() => handleCreateEquity(row)}
+                                  >
+                                    Create {row.label} Equity
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
             <div
               style={{

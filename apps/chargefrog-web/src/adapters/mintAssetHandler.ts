@@ -1,4 +1,5 @@
 import {
+  GetMaxSupplyRequest,
   IssueRequest,
   TransferRequest,
 } from '@hashgraph/asset-tokenization-sdk';
@@ -15,17 +16,43 @@ type MintAssetHandlerOptions = {
 
 export async function mintAssetHandler(
   _targetId: string,
+  stationId: number,
   options?: MintAssetHandlerOptions,
 ) {
+  const security =
+    stationId === 1
+      ? import.meta.env.VITE_STATION_1_SECURITY_CONTRACT_ID
+      : stationId === 2
+        ? import.meta.env.VITE_STATION_2_SECURITY_CONTRACT_ID
+        : stationId === 3
+          ? import.meta.env.VITE_STATION_3_SECURITY_CONTRACT_ID
+          : stationId === 4
+            ? import.meta.env.VITE_STATION_4_SECURITY_CONTRACT_ID
+            : (import.meta.env.VITE_SECURITY_CONTRACT_ID ?? '');
   try {
     const onProgress = options?.onProgress;
     // 1 — APPLY ROLES FIRST
-    const security = import.meta.env.VITE_SECURITY_CONTRACT_ID ?? ''; // security contract
+
     // Share the same amount string for mint and optional transfer
     const amountStr =
       options?.transferAmount !== undefined
         ? String(options.transferAmount)
         : '0.0';
+
+    console.log('StationID:', stationId);
+    console.log('TargetID:', _targetId);
+    console.log(
+      'SecurityID:',
+      import.meta.env.VITE_STATION_1_SECURITY_CONTRACT_ID,
+    );
+
+    const max_supply = new GetMaxSupplyRequest({
+      securityId: security,
+    });
+
+    const max_res = await sdk.getMaxSupply(max_supply);
+
+    console.log('This is the max supply:', max_res);
 
     /*
     This was commented out because admins have already been given the issuer and agent roles.
@@ -69,7 +96,7 @@ export async function mintAssetHandler(
     const mintReq = new IssueRequest({
       securityId: security,
       // IMPORTANT: per requirement, do not change this targetId
-      targetId: '0.0.7106098',
+      targetId: import.meta.env.VITE_DIAMOND_OWNER_ACCOUNT_ID,
       amount: amountStr,
     });
 
@@ -87,17 +114,16 @@ export async function mintAssetHandler(
 
     // 3 — Transfer after mint
     let transferRes: unknown = null;
-    if (options?.receiverId) {
-      const transReq = new TransferRequest({
-        targetId: options.receiverId,
-        amount: amountStr,
-        securityId: security,
-      });
-      onProgress?.(`Transferring ${amountStr} tokens to receiver...`);
-      transferRes = await sdk.transfer(transReq);
-      if (transferRes) {
-        onProgress?.('Transfer completed');
-      }
+
+    const transReq = new TransferRequest({
+      targetId: _targetId,
+      amount: amountStr,
+      securityId: security,
+    });
+    onProgress?.(`Transferring ${amountStr} tokens to receiver...`);
+    transferRes = await sdk.transfer(transReq);
+    if (transferRes) {
+      onProgress?.('Transfer completed');
     }
 
     return JSON.stringify({ mintResult, transferRes });
