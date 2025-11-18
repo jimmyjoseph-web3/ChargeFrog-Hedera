@@ -1,13 +1,32 @@
 import { NextResponse } from "next/server";
 import { db } from "@/src/lib/firebaseAdmin";
 
+// CORS config
+const allowedOrigin = "https://chargefrog-control.vercel.app";
+
+function corsResponse(body: any, status = 200) {
+  return new NextResponse(JSON.stringify(body), {
+    status,
+    headers: {
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
+}
+
+export async function OPTIONS() {
+  // Preflight request
+  return corsResponse({}, 200);
+}
+
 export async function POST(request: Request) {
   try {
     const { walletAddress } = await request.json();
     if (!walletAddress) {
-      return NextResponse.json(
+      return corsResponse(
         { error: "Missing walletAddress" },
-        { status: 400 }
+        400
       );
     }
 
@@ -21,14 +40,14 @@ export async function POST(request: Request) {
       console.log("Active charge removed");
     }
 
-    return NextResponse.json({
+    return corsResponse({
       success: true,
       message: "Active charge removed.",
     });
   } catch (error: any) {
-    return NextResponse.json(
+    return corsResponse(
       { error: "Failed to remove active charge", details: error.message },
-      { status: 500 }
+      500
     );
   }
 }
