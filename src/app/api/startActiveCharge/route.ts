@@ -23,8 +23,8 @@ export async function POST(request: Request) {
 
     await activeChargeRef.update({
       isWarmingUp: false,
-      // startTimestamp: Date.now()
-      startTimestamp: Date.now() - (5 * 60 * 1000) // add 20 minutes: REMOVE THIS IN PROD
+      startTimestamp: Date.now()
+      // startTimestamp: Date.now() - (5 * 60 * 1000) // add 20 minutes: REMOVE THIS IN PROD
     });
 
     const response = NextResponse.json({
