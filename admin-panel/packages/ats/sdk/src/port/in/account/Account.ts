@@ -203,9 +203,9 @@
 
 */
 
-import AccountViewModel from './../response/AccountViewModel';
-import GetAccountInfoRequest from './../request/account/GetAccountInfoRequest';
-import GetAccountBalanceRequest from './../request/account/GetAccountBalanceRequest';
+import AccountViewModel from '../response/AccountViewModel';
+import GetAccountInfoRequest from '../request/account/GetAccountInfoRequest';
+import GetAccountBalanceRequest from '../request/account/GetAccountBalanceRequest';
 import ValidatedRequest from '@core/validation/ValidatedArgs';
 
 import { GetAccountInfoQuery } from '@query/account/info/GetAccountInfoQuery';
