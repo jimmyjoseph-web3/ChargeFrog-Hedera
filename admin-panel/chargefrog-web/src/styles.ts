@@ -1,0 +1,142 @@
+const styles = {
+  container: {
+    width: '100%',
+    maxWidth: '1200px',
+    margin: '10px auto',
+    fontFamily: 'Inter, sans-serif',
+  },
+  title: {
+    textAlign: 'center' as const,
+    marginBottom: 30,
+    fontWeight: 700,
+    color: '#0b1c36',
+  },
+  content: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '40px',
+    marginTop: '20px',
+  },
+  leftPane: {
+    width: '260px',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '20px',
+  },
+  image: {
+    width: 140,
+    margin: '0 auto 10px auto',
+  },
+  rightPane: {
+    flex: 1,
+    background: '#fff',
+    border: '1px solid #ddd',
+    borderRadius: 12,
+    padding: 20,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+    minWidth: '480px',
+  },
+  actionsCell: {
+    textAlign: 'left' as const,
+  },
+  sections: {
+    width: '100%',
+  },
+  sectionHeader: {
+    cursor: 'pointer',
+    fontSize: 16,
+    fontWeight: 600,
+    color: '#1a2a4a',
+    marginBottom: 8,
+  },
+  sectionButtons: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '8px',
+    paddingLeft: 16,
+    marginBottom: 8,
+  },
+  divider: {
+    border: 'none',
+    borderBottom: '1px solid #eee',
+    margin: '10px 0',
+  },
+  tableHeader: {
+    textAlign: 'center' as const,
+    background: '#f5f7fb',
+    padding: '10px',
+    borderRadius: 8,
+    fontWeight: 600,
+    color: '#0b1c36',
+    marginBottom: 12,
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse' as const,
+  },
+  dropdownButton: {
+    background: '#0b1c36',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 14,
+    cursor: 'pointer',
+  },
+  statusBox: {
+    background: '#f9f9f9',
+    borderRadius: 8,
+    padding: 16,
+    textAlign: 'left' as const,
+    marginTop: 30,
+    border: '1px solid #eaeaea',
+  },
+  listContainer: {
+    textAlign: 'left' as const,
+  },
+  detailCard: {
+    margin: '8px 0 16px 0',
+    padding: 16,
+    border: '1px solid #e5e7eb',
+    background: '#f8fafc',
+    borderRadius: 10,
+  },
+  detailRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#0b1c36',
+    fontWeight: 600,
+  },
+  detailActions: {
+    display: 'flex',
+    gap: 12,
+    marginTop: 16,
+  },
+  primaryBtn: {
+    background: '#000',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    padding: '10px 14px',
+    cursor: 'pointer',
+  },
+  secondaryBtn: {
+    background: '#10b981',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    padding: '10px 14px',
+    cursor: 'pointer',
+  },
+};
+
+export default styles;
