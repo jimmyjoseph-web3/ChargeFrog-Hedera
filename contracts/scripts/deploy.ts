@@ -1,5 +1,6 @@
 import { network } from "hardhat";
-
+import { writeFileSync, mkdirSync } from "fs";
+import path from "path";
 // ----------------------------------------------------------
 // Helpers for units (wei only)
 // ----------------------------------------------------------
@@ -398,4 +399,178 @@ async function main() {
   logN("Spender BOLT balance (raw 18 decimals):", boltBal.toString());
   // Human readable via ethers formatting
   logN("Spender BOLT balance (human):", ethers.formatUnits(boltBal, 18));
+
+  // ----------------------------------------------------------
+  // (5) Spend Bolt at Station 2 (approve then spend)
+  // ----------------------------------------------------------
+  logN("\n== Spending Bolt at Station 2 (Majestic Labs) ==");
+  const station2BoltBefore = await bolt.balanceOf(station2Address);
+  logN(
+    "Station 2 BOLT balance before (raw):",
+    station2BoltBefore.toString(),
+    "| human:",
+    ethers.formatUnits(station2BoltBefore, 18)
+  );
+  const spendEquivalentWei = weibar(18n); // spend equivalent of 1 HBAR worth of BOLT
+  logN(
+    `Attempting to spend Bolt at Station 2... ${spendEquivalentWei.toString()} wei (1 HBAR equivalent)`
+  );
+  const boltToSpend2 = spendEquivalentWei * BOLT_PER_HBAR; // 1 HBAR => 3e18 BOLT units
+  await logTx(
+    await bolt.connect(spender).approve(boltAddress, boltToSpend2),
+    "Approve BOLT Allowance (Station 2)"
+  );
+  await logTx(
+    await bolt.connect(spender).spendBolt(station2Id, boltToSpend2),
+    "Spend BOLT at Station 2"
+  );
+  logN("🧾 Bolt spent at Station 2 (raw units):", boltToSpend2.toString());
+  logN(
+    "🧾 Bolt spent at Station 2 (human):",
+    ethers.formatUnits(boltToSpend2, 18)
+  );
+  const revenueBolt2 = await station2.totalRevenueBolt();
+  logN(
+    "Station 2 revenue (BOLT) raw:",
+    revenueBolt2.toString(),
+    "| human:",
+    ethers.formatUnits(revenueBolt2, 18)
+  );
+  const station2BoltAfter = await bolt.balanceOf(station2Address);
+  const station2BoltDelta = station2BoltAfter - station2BoltBefore;
+  logN(
+    "Station 2 BOLT balance after (raw):",
+    station2BoltAfter.toString(),
+    "| human:",
+    ethers.formatUnits(station2BoltAfter, 18)
+  );
+  logN(
+    "Station 2 BOLT delta (raw):",
+    station2BoltDelta.toString(),
+    "| human:",
+    ethers.formatUnits(station2BoltDelta, 18)
+  );
+  await logStation2Balances("after spend");
+
+  // ----------------------------------------------------------
+  // (6) Activate claims (no direct HBAR deposit; revenue comes from BOLT spend)
+  // ----------------------------------------------------------
+  await logTx(
+    await station2.connect(admin).setStationActive(true),
+    "Set Station 2 Active"
+  );
+  logN("✅ Station 2 claims activated (BOLT spend supplies revenue)");
+  await logStation2Balances("after activation");
+
+  // // ----------------------------------------------------------
+  // // (7) Investor claims proportional HBAR from Station 2
+  // // ----------------------------------------------------------
+  logN("\n== Claiming Rewards from Station 2 (Majestic Labs) ==");
+  const s2Target = await station2.totalInvestmentTarget();
+  const s2Raised = await station2.raisedAmount();
+  const s2RevenueBolt = await station2.totalRevenueBolt();
+  const s2Invested = await station2.investedAmount(investor.address);
+  logN(
+    "Station 2 Target (wei):",
+    s2Target.toString(),
+    "| HBAR:",
+    ethers.formatUnits(s2Target, 18)
+  );
+  logN(
+    "Station 2 Raised (wei):",
+    s2Raised.toString(),
+    "| HBAR:",
+    ethers.formatUnits(s2Raised, 18)
+  );
+  logN(
+    "Station 2 Revenue BOLT (raw 18):",
+    s2RevenueBolt.toString(),
+    "| BOLT:",
+    ethers.formatUnits(s2RevenueBolt, 18)
+  );
+  const s2RevenueHbarEqWei = s2RevenueBolt / 3n;
+  logN(
+    "Station 2 Revenue HBAR-eq (wei via BOLT/3):",
+    s2RevenueHbarEqWei.toString(),
+    "| HBAR:",
+    ethers.formatUnits(s2RevenueHbarEqWei, 18)
+  );
+  logN(
+    "Station 2 Investor invested (wei):",
+    s2Invested.toString(),
+    "| HBAR:",
+    ethers.formatUnits(s2Invested, 18)
+  );
+  let s2EntitledWei = 0n;
+  if (s2Target > 0n) {
+    // Match new contract claim math: invested / target * (totalRevenueBolt/3)
+    s2EntitledWei = (s2Invested * (s2RevenueBolt / 3n)) / s2Target;
+    logN(
+      "Station 2 Expected entitlement (wei):",
+      s2EntitledWei.toString(),
+      "| HBAR:",
+      ethers.formatUnits(s2EntitledWei, 18)
+    );
+  } else {
+    logN("Station 2 Expected entitlement (wei): 0 | HBAR: 0");
+  }
+  const s2PendingWei = await station2.unclaimed(investor.address);
+  logN(
+    "Station 2 Claimable (wei):",
+    s2PendingWei.toString(),
+    "| HBAR:",
+    ethers.formatUnits(s2PendingWei, 18)
+  );
+  if (s2PendingWei > 0n) {
+    await logTx(
+      await station2.connect(investor).claim(),
+      "Investor Claim Station 2"
+    );
+    logN("✅ Investor claimed successfully from Station 2!");
+    await logStation2Balances("after claim");
+  } else {
+    logN("Nothing to claim yet on Station 2.");
+  }
+
+  // ----------------------------------------------------------
+  // Summary
+  // ----------------------------------------------------------
+  logN("\n==============================================");
+  logN("🌐 FULL DEPLOYMENT + FLOW COMPLETE (native HBAR)");
+  logN("==============================================");
+  logN("Registry:", registryAddress);
+  logN("Bolt:    ", boltAddress);
+  for (const s of deployedStations) {
+    logN(`Station[${s.id}]: ${s.address} -> ${s.name}`);
+    logN(`  Shares: ${s.shares}`);
+  }
+  logN("==============================================\n");
+
+  // ----------------------------------------------------------
+  // (8) Persist deployment info to JSON file
+  // ----------------------------------------------------------
+  const net = await ethers.provider.getNetwork();
+  const output = {
+    network: { name: (net as any).name, chainId: net.chainId.toString() },
+    registry: registryAddress,
+    bolt: boltAddress,
+    stations: deployedStations,
+    timestamp: new Date().toISOString(),
+  } as const;
+  const outDir = path.resolve(process.cwd(), "deployments");
+  try {
+    mkdirSync(outDir, { recursive: true });
+    const filePath = path.join(outDir, `deployment-${Date.now()}.json`);
+    writeFileSync(filePath, JSON.stringify(output, null, 2), {
+      encoding: "utf-8",
+    });
+    logN(`📝 Deployment JSON written to ${filePath}`);
+  } catch (err) {
+    console.error("Failed to write deployment JSON", err);
+  }
+
+  // ----------------------------------------------------------
+  await main().catch((err) => {
+    console.error("❌ Deployment error:", err);
+  });
 }
