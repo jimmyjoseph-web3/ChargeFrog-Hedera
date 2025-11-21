@@ -12,7 +12,7 @@
 
 1. Our Demo Video (Youtube) [🌐Watch It!](https://youtu.be/7yTQuoSmTv4)
 
-2. Our Pitch Deck (PDF) [🌐Read It!]
+2. Our Pitch Deck (PDF) [🌐Read It!](https://drive.google.com/file/d/15hBYDwsjDUcxFoiLwpcE9h3weL4yLuzJ/view?usp=sharing)
 
 3. Our Demo DApp (Deployed on Hedera Testnet) [🌐Try It!](https://chargefrog.vercel.app/)
 
