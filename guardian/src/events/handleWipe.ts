@@ -1,7 +1,7 @@
 import { getAccessToken, loginAsAdmin } from "../services/authService";
 import { getPolicies, wipeToken } from "../services/policyService";
 import dotenv from "dotenv";
-import fetch from "node-fetch";
+import axios from "axios";
 dotenv.config({ path: ".env" });
 
 // Mirror Node base (testnet)
@@ -10,18 +10,19 @@ const MIRROR_BASE = "https://testnet.mirrornode.hedera.com";
 async function fetchAllNftsForToken(tokenId: string): Promise<any[]> {
   const out: any[] = [];
   let url = `${MIRROR_BASE}/api/v1/tokens/${tokenId}/nfts?limit=100`;
+
+  // Dynamic import replaced with direct axios call
   while (url) {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`Mirror node error ${r.status}`);
-    const j: any = await r.json();
+    // 👈 CHANGE: Use axios instead of fetch
+    const r = await axios.get(url);
+    const j: any = r.data;
+
     if (Array.isArray(j.nfts)) out.push(...j.nfts);
-    // Pagination (links.next gives path)
-    if (j.links?.next) {
-      url = `${MIRROR_BASE}${j.links.next}`;
-    } else {
-      url = "";
-    }
+
+    // Pagination
+    url = j.links?.next ? `${MIRROR_BASE}${j.links.next}` : "";
   }
+
   return out;
 }
 
@@ -31,6 +32,7 @@ function groupContiguous(serials: number[]): string[] {
   const ranges: string[] = [];
   let start = serials[0];
   let prev = serials[0];
+
   for (let i = 1; i < serials.length; i++) {
     const cur = serials[i];
     if (cur === prev + 1) {
@@ -41,6 +43,7 @@ function groupContiguous(serials: number[]): string[] {
     start = cur;
     prev = cur;
   }
+
   ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
   return ranges;
 }
@@ -56,9 +59,9 @@ export async function wipeCarbonFrog(wipePayload?: any) {
   const policy = await getPolicies(accessToken);
   if (!policy) throw new Error("No policy received from getPolicies");
 
-  // If field1 provided and not empty, keep existing range / single behavior
-  const field1 = wipePayload?.document?.field1;
-  if (typeof field1 === "string" && field1.trim() !== "") {
+  // field1 provided
+  const field1 = wipePayload?.document?.field1 ?? "";
+  if (field1.trim()) {
     if (field1.includes("-")) {
       const [aStr, bStr] = field1.split("-");
       const start = Number(aStr.trim());
@@ -66,13 +69,9 @@ export async function wipeCarbonFrog(wipePayload?: any) {
       if (!Number.isFinite(start) || !Number.isFinite(end)) {
         throw new Error("Invalid field1 range format. Use e.g. '4-8'.");
       }
-      const from = Math.min(start, end);
-      const to = Math.max(start, end);
       const results: any[] = [];
-      for (let n = from; n <= to; n++) {
-        const perPayload = {
-          document: { field1: String(n) },
-        };
+      for (let n = Math.min(start, end); n <= Math.max(start, end); n++) {
+        const perPayload = { document: { field1: String(n) } };
         const res = await wipeToken(
           accessToken,
           process.env.wipeTokenRequestVCBlock_policyID || "",
@@ -89,7 +88,7 @@ export async function wipeCarbonFrog(wipePayload?: any) {
         results,
       };
     } else {
-      const singlePayload = { document: { field1: field1 } };
+      const singlePayload = { document: { field1 } };
       const blockData = await wipeToken(
         accessToken,
         process.env.wipeTokenRequestVCBlock_policyID || "",
@@ -108,26 +107,22 @@ export async function wipeCarbonFrog(wipePayload?: any) {
 
   const allNfts = await fetchAllNftsForToken(tokenId);
 
-  // Owned (account_id == targetAccount && not deleted)
   const owned = allNfts.filter(
     (nft) => nft.account_id === targetAccount && !nft.deleted
   );
-
-  if (!owned.length) {
+  if (!owned.length)
     return {
       ok: true,
       mode: "auto",
       message: "No owned NFTs to wipe",
       ownedCount: 0,
     };
-  }
 
   const serials = owned
     .map((n) => Number(n.serial_number))
     .filter(Number.isFinite);
-  const ranges = groupContiguous(serials);
-
   const wipeResults: any[] = [];
+
   for (const s of serials) {
     const perPayload = { document: { field1: String(s) } };
     const res = await wipeToken(
@@ -136,14 +131,15 @@ export async function wipeCarbonFrog(wipePayload?: any) {
       process.env.wipeTokenRequestVCBlock_blockUUID || "",
       perPayload
     );
-    if (!res) {
-      wipeResults.push({ serial: s, error: "wipe failed" });
-    } else {
-      wipeResults.push({ serial: s, result: res });
-    }
+    wipeResults.push(
+      res ? { serial: s, result: res } : { serial: s, error: "wipe failed" }
+    );
   }
 
   return {
     ok: true,
+    // mode: "auto",
+    // wipedCount: wipeResults.length,
+    // results: wipeResults,
   };
 }
