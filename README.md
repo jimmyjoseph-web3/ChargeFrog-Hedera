@@ -5,7 +5,7 @@
 </div>
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/98f72d87-4769-4537-84e3-340db4d9d946" width="3690" height="427" alt="Image" />
+  <img src="https://github.com/user-attachments/assets/c2865377-61ce-4894-aff1-1841b9fe18f1" width="3690" height="427" alt="Image" />
 </p>
 
 ## 🐸 Our Deliverables
@@ -14,7 +14,7 @@
 
 2. Our Pitch Deck (PDF) [🌐Read It!](https://drive.google.com/file/d/15hBYDwsjDUcxFoiLwpcE9h3weL4yLuzJ/view?usp=sharing)
 
-3. Our Demo DApp (Deployed on Hedera Testnet) [🌐Try It!](https://chargefrog.vercel.app/)
+3. Our Demo DApp (Deployed on Hedera Testnet) [🌐Try It!](https://chargefrog-hedera.vercel.app/)
 
 ## TL;DR 👉 What is ChargeFrog?
 
@@ -32,7 +32,7 @@ Europe’s electric vehicle (EV) adoption is accelerating far faster than its ch
 
 This mismatch is creating a widening structural gap: EV demand is scaling exponentially, while charging infrastructure grows linearly. At the current rate, the EU’s target of deploying 3.5 million chargers by 2030 appears increasingly unattainable. If this trend continues, Europe risks facing severe charging bottlenecks, slower EV adoption, and reduced consumer confidence—ultimately undermining its climate and mobility goals.
 
-<img width="1309" height="726" alt="Image" src="https://github.com/user-attachments/assets/ee9e11ed-4b9f-4cdd-b0df-9504ac551aa9" />
+<img width="1309" height="726" alt="Image" src="https://github.com/user-attachments/assets/55ff1710-748f-45b6-9888-3f581b0fc84c" />
 
 ### 2️⃣ The Uneven Distributions
 
@@ -42,7 +42,7 @@ For example, the Netherlands—home to just 17 million people—hosts more than 
 
 This uneven deployment results in inconsistent charging access, discourages cross-border travel, and risks creating a multi-speed EV transition where progress is concentrated in a handful of countries. Without addressing both the quantity and geographic distribution of charging stations, Europe’s EV ecosystem will remain fragmented and insufficient to support the continent’s accelerating electrification.
 
-<img width="1305" height="724" alt="Image" src="https://github.com/user-attachments/assets/c0eb89fe-e510-4808-b7cc-a8748e67135e" />
+<img width="1298" height="677" alt="Image" src="https://github.com/user-attachments/assets/01525db4-c1a4-456b-9160-23a6d44b3b12" />
 
 ### 3️⃣ High Barrier for EV Infra Investments
 
@@ -126,7 +126,7 @@ At ChargeFrog, we have created a single Super App that unites EV charging, decen
 ### ⚡️ A Unified Charging Experience
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/3c20b678-55c2-4e32-9d86-26619cf67755" width="424" height="686" alt="Image" />
+  <img src="https://github.com/user-attachments/assets/01f57ab2-9286-44ba-8f3c-89ec04e469dd" width="424" height="686" alt="Image" />
 </p>
 
 We ensure charging your EV is smooth and simple:
@@ -143,7 +143,7 @@ We ensure charging your EV is smooth and simple:
 
 ### Invest & Earn Anywhere
 
-<img width="1301" height="729" alt="Image" src="https://github.com/user-attachments/assets/c39bb8b2-9817-4f0d-9f7e-958c96cf9afb" />
+<img width="1301" height="729" alt="Image" src="https://github.com/user-attachments/assets/2ce3b69e-539e-4a90-99dd-e5c1277d6bd7" />
 
 We allow anyone to own a piece of the growing EV infrastructure:
 
@@ -192,7 +192,7 @@ The **ChargeFrog Super App** serves as the state conduit, submitting signed tran
 ## 💳 Optimizing Charging Economics with BOLT (ERC-20 Token)
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/edacbab0-5698-460a-a99b-a3f761ca1e57" width="618" height="555" alt="Image" />
+  <img src="https://github.com/user-attachments/assets/d730a1d0-654f-4b01-aa77-0e119ee6aab2" width="713" height="586" alt="Image" />
 </p>
 
 **Bolt** is an **ERC-20 token** that powers the ChargeFrog network’s on-chain charging economy, ensuring payments are traceable and revenue flows back to the stations’ investors.
@@ -242,7 +242,7 @@ The **Station Registry** maps each unique Station ID to a structured record cont
 ## 🪙 Realizing Fractional Investment with Native Asset Tokenization
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/fd1582e0-0d41-451d-aed2-65328781c4fd" width="746" height="714" alt="Image" />
+  <img src="https://github.com/user-attachments/assets/8c872163-eb37-4233-a2ac-e909d2079cc1" width="746" height="714" alt="Image" />
 </p
 
 ChargeFrog utilizes the Hedera Asset Tokenization SDK capabilities to represent ownership units as compliant security tokens.
@@ -293,7 +293,7 @@ Each charging station is a complete economic unit with its own dedicated **on-ch
 ## 🕵🏻 Auditing ChargeFrog on Hedera with Guardian
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/bddf9926-d099-4b36-86d6-f7a7a8a13dab" width="677" height="688" alt="Image" />
+  <img src="https://github.com/user-attachments/assets/f05f5e1a-4c59-428a-8399-909aab56224b" width="677" height="688" alt="Image" />
 </p
 
 ChargeFrog directly addresses the Voluntary Carbon Market (VCM) credibility crisis, where traditional "analog" Monitoring, Reporting, and Verification (MRV) processes are often retrospective, slow, and opaque. This lack of transparency makes genuine green claims vulnerable to "greenwashing" allegations and investor skepticism.
@@ -335,7 +335,7 @@ This eliminates the "black box" of traditional carbon credits, replacing it with
 
 ### The Market Is Ready — And So Are the People
 
-<img width="1488" height="488" alt="Image" src="https://github.com/user-attachments/assets/b30741bb-6479-46b5-91b7-82f524f0f120" />
+<img width="1488" height="488" alt="Image" src="https://github.com/user-attachments/assets/41427f00-762f-4e79-8041-a35a706e1130" />
 
 We recognize that the rapidly accelerating shift to EVs is creating strong, consistent demand for public charging infrastructure. Our unique, decentralized solution empowers everyday citizens and local EV owners to not only use the charging infrastructure but to actively co-invest in it, fostering a true sense of community ownership and alignment.
 
@@ -352,7 +352,7 @@ We are targeting a **Total Addressable Market (TAM)** of €34 billion in Europe
 ## 🛡️ We Enable Something No Other Network Does
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/466b61ec-c511-49a5-b5c0-b4710cc83915" width="741" height="616" alt="Image" />
+  <img src="https://github.com/user-attachments/assets/567a33b7-895d-4005-bf84-c458a40528cf" width="741" height="616" alt="Image" />
 </p
 
 We are not merely building a charging network; we are initiating a global movement to democratize the ownership of future energy infrastructure.
@@ -368,7 +368,7 @@ This model allows ChargeFrog to effectively bridge the gap between low-barrier i
 
 ## 💸 Sustainability & Revenue Model
 
-<img width="1483" height="833" alt="Image" src="https://github.com/user-attachments/assets/ee60f25c-703b-42e3-a84e-8d6ef6d2eb48" />
+<img width="1404" height="737" alt="Image" src="https://github.com/user-attachments/assets/2cb8b6c7-2c20-4eb0-b64d-2fd3ffa5059c" />
 
 We have established a multi-pronged revenue model to guarantee the platform’s sustainability and provide stable, recurring income for our investors:
 
@@ -423,7 +423,7 @@ We focus on three core metrics to validate our model and drive adoption:
 
 ## 🛣️ What's next in our developer roadmap?
 
-<img width="1490" height="837" alt="Image" src="https://github.com/user-attachments/assets/1f38ee57-e8f7-44f5-983a-66abd52f826f" />
+<img width="1490" height="837" alt="Image" src="https://github.com/user-attachments/assets/6c2a2240-ac58-415d-9379-ada416085280" />
 
 We have successfully completed the **MVP + Pilot on Hedera Testnet**, featuring a mobile-based EV charging super app with real-life pilot station integration. Our next steps involve expanding functionality and preparing for mainnet launch:
 
