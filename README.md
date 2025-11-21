@@ -10,7 +10,7 @@
 
 ## 🐸 Our Deliverables
 
-1. Our Demo Video (Youtube) [🌐Watch It!](https://www.youtube.com/watch?v=TK1o-re_Mco)
+1. Our Demo Video (Youtube) [🌐Watch It!](https://youtu.be/7yTQuoSmTv4)
 
 2. Our Pitch Deck (PDF) [🌐Read It!]
 
