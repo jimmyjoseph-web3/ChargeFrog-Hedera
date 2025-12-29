@@ -213,81 +213,100 @@ export default function Claim() {
   }, [receipt, isSuccess]);
 
   // ===== Claim click handler =====
-  const handleClaimClick = async (stationId: number) => {
-    if (!address) return toast.error("Please connect your wallet first");
+const handleClaimClick = async (stationId: number) => {
+  if (!address) return toast.error("Please connect your wallet first");
 
-    const contractAddress = STATION_ADDRESSES[stationId];
-    if (!contractAddress) return toast.error(`Unknown station ID ${stationId}`);
+  const contractAddress = STATION_ADDRESSES[stationId];
+  if (!contractAddress) return toast.error(`Unknown station ID ${stationId}`);
 
-    try {
-      toast.loading("Checking and claiming rewards...");
+  try {
+    toast.loading("Checking and claiming rewards...");
 
-      const txHash = await writeContractAsync({
-        address: contractAddress,
-        abi: STATION_ABI,
-        functionName: "claim",
-        account: address,
-      });
+    const txHash = await writeContractAsync({
+      address: contractAddress,
+      abi: STATION_ABI,
+      functionName: "claim",
+      account: address,
+    });
 
-      setCurrentTxHash(txHash);
+    setCurrentTxHash(txHash);
 
-      const receipt = await publicClient.waitForTransactionReceipt({
-        hash: txHash,
-      });
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash,
+    });
 
-      toast.dismiss();
+    // // ================= MOCK CLAIM OVERRIDE =================
+    // // COMMENT THIS OUT TO RESTORE REAL BEHAVIOR
+    // {
+    //   console.warn("⚠ MOCK MODE ACTIVE: Always showing 5.25 HBAR claimed.");
 
-      // Loop + decode all Claimed events
-      const decodedEvents = receipt.logs
-        .map((log, i) => {
-          try {
-            const decoded = decodeEventLog({
-              abi: STATION_ABI,
-              data: log.data,
-              topics: log.topics,
-            });
-            console.log(`Decoded log [${i}]`, decoded);
-            return decoded;
-          } catch {
-            console.log(`Skipped non-station log [${i}]`);
-            return null;
-          }
-        })
-        .filter((e) => e?.eventName === "Claimed");
+    //   const mockAmount = 5.25;
 
-      if (!decodedEvents.length) {
-        setNothingDrawerOpen(true);
-        return toast.error("Nothing to claim at this time.");
-      }
+    //   setClaimedAmount(mockAmount);
+    //   setClaimedTxHash(txHash);
+    //   setSuccessDrawerOpen(true);
 
-      const event = decodedEvents[0] as any;
-      const claimedAmt = fromTokenUnits(event.args.claimedAmount);
+    //   toast.dismiss();
+    //   toast.success(`Claimed ${mockAmount} HBAR successfully!`);
 
-      await fetch("/api/updateAfterClaim", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          walletAddress: address,
-          stationId,
-          claimedAmount: claimedAmt,
-        }),
-      });
+    //   return; // <-- IMPORTANT: prevents the real logic from running
+    // }
+    // // =======================================================
 
-      setClaimedAmount(claimedAmt);
-      setClaimedTxHash(txHash);
-      setSuccessDrawerOpen(true);
-      toast.success(`Claimed ${claimedAmt.toFixed(6)} HBAR successfully!`);
-    } catch (err: any) {
-      toast.dismiss();
-      console.error("Claim failed:", err);
+    toast.dismiss();
+
+    // Loop + decode all Claimed events
+    const decodedEvents = receipt.logs
+      .map((log, i) => {
+        try {
+          const decoded = decodeEventLog({
+            abi: STATION_ABI,
+            data: log.data,
+            topics: log.topics,
+          });
+          console.log(`Decoded log [${i}]`, decoded);
+          return decoded;
+        } catch {
+          console.log(`Skipped non-station log [${i}]`);
+          return null;
+        }
+      })
+      .filter((e) => e?.eventName === "Claimed");
+
+    if (!decodedEvents.length) {
       setNothingDrawerOpen(true);
-      if (err.message?.includes("NothingToClaim")) {
-        toast.error("Nothing to claim yet.");
-      } else {
-        toast.error("Transaction failed or reverted.");
-      }
+      return toast.error("Nothing to claim at this time.");
     }
-  };
+
+    const event = decodedEvents[0] as any;
+    const claimedAmt = fromTokenUnits(event.args.claimedAmount);
+
+    await fetch("/api/updateAfterClaim", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        walletAddress: address,
+        stationId,
+        claimedAmount: claimedAmt,
+      }),
+    });
+
+    setClaimedAmount(claimedAmt);
+    setClaimedTxHash(txHash);
+    setSuccessDrawerOpen(true);
+    toast.success(`Claimed ${claimedAmt.toFixed(6)} HBAR successfully!`);
+  } catch (err: any) {
+    toast.dismiss();
+    console.error("Claim failed:", err);
+    setNothingDrawerOpen(true);
+    if (err.message?.includes("NothingToClaim")) {
+      toast.error("Nothing to claim yet.");
+    } else {
+      toast.error("Transaction failed or reverted.");
+    }
+  }
+};
+
 
   // ===== UI =====
   return (

@@ -5,7 +5,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { motion } from "motion/react"
 import { ref, onValue, off, DataSnapshot } from "firebase/database"
-import { db } from "../../lib/firebaseClient"
+import { db } from "@/src/lib/firebaseClient"
 
 type ActiveChargeReminderProps = {
   walletAddress: string

@@ -58,6 +58,7 @@ export async function POST(request: Request) {
     const previousMintCount = Math.floor(previousOffset / 100);
     const newMintCount = Math.floor(newOffset / 100);
     const mintsToDo = newMintCount - previousMintCount;
+    
 
     for (let i = 0; i < mintsToDo; i++) {
       const timestamp = new Date().toISOString();
@@ -100,6 +101,8 @@ export async function POST(request: Request) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(wipePayload),
       });
+
+      console.log("Wiped at 1kg checkpoint.");
 
       updatedWipeCount += 1; // increment the wipe flag
     }

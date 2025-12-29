@@ -20,7 +20,8 @@ export async function POST(request: Request) {
       offsetCo2: 0,
       totalInvestHbar: 0,
       totalHbarEarnings: 0,
-      boltCreditAmount: 0
+      boltCreditAmount: 0,
+      currentWipeRange:0
     });
 
     return NextResponse.json(

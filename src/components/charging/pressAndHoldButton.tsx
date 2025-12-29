@@ -116,9 +116,7 @@ export default function PressAndHoldToStop({
       try {
         // --- Compute amount in 18 decimals ---
         const decimals = 18;
-        const amountToSpend = BigInt(
-          totalCreditSpend * 10 ** decimals
-        );
+        const amountToSpend = BigInt(totalCreditSpend * 10 ** decimals);
 
         // --- 1️⃣ Approve BOLT if needed ---
         const allowance = (await publicClient.readContract({
@@ -153,10 +151,35 @@ export default function PressAndHoldToStop({
 
         setSpendTx(spendTxHash);
 
+        // 1. Mint loading
+        const mintToastId = toast.loading(
+          "Minting CarbonFrog to record your carbon offset..."
+        );
+
+        // After 5s → remove mint loading, then show mint success
+        setTimeout(() => {
+          toast.dismiss(mintToastId);
+          toast.success("CarbonFrog Minted!");
+
+          // 2. Wipe loading
+          const wipeToastId = toast.loading("Another kilo offset! Wiping...");
+
+          // After 5s → remove wipe loading, then show wipe success
+          setTimeout(() => {
+            toast.dismiss(wipeToastId);
+            toast.success("Wipe completed!");
+          }, 5000);
+        }, 5000);
+
         await fetch("/api/completeTx", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ walletAddress: address, txHash: spendTxHash, totalCreditSpend, totalKWhCharged }),
+          body: JSON.stringify({
+            walletAddress: address,
+            txHash: spendTxHash,
+            totalCreditSpend,
+            totalKWhCharged,
+          }),
         });
 
         // === 4️⃣ Update stats ===
