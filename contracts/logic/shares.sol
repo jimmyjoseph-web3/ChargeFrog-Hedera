@@ -12,7 +12,7 @@ contract Shares is Ownable {
     struct InvestorStat {
         uint256 totalInvested;
         uint256 totalClaimed;
-    }
+    } 
 
     mapping(address => InvestorStat) public investors;
     mapping(uint256 => uint256) public stationTotals; // stationId -> total invested

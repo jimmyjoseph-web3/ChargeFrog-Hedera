@@ -20,7 +20,7 @@ contract Bolt is ERC20, Ownable, ReentrancyGuard {
     // Pricing: 1 native HBAR => 3.0 BOLT (human units)
     uint256 public constant EXCHANGE_RATE = 3; // per 1 HBAR
     // Hedera EVM note: msg.value is denominated in tinybars (1e8 per HBAR).
-    // ERC-20 uses 18 decimals. To map 1 HBAR -> 3e18 BOLT, scale by 1e10.
+    // ERC-20 uses 18 decimals. To map 1 HBAR -> 3e18 BOLT, scale by 1e10. 
     uint256 private constant NATIVE_TO_TOKEN_SCALE = 10 ** 10; // 1e18 / 1e8
 
     // stationId => fundAddress

@@ -154,9 +154,9 @@ contract Registry is Ownable {
     /** @notice Returns whether a station is active */
     function isStationActive(uint256 stationId) public view stationExists(stationId) returns (bool) {
         return stations[stationId].active;
-    }
+    } 
 
-    /** @notice Returns the StationFund address for a station */
+    /** @notice Returns the StationFund address for a station */ 
     function getStationFund(uint256 stationId) public view stationExists(stationId) returns (address) {
         return stations[stationId].fundAddress;
     }

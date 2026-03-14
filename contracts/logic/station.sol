@@ -18,7 +18,7 @@ interface IShares {
  * @notice One vault per EV charging station. Holds HBAR (investments) & BOLT (revenue).
  * Handles investments, revenue tracking, and proportional HBAR claims for investors.
  */
-contract Station is Ownable, ReentrancyGuard {
+contract Station is Ownable, ReentrancyGuard { 
     uint256 public stationId;
     string public stationName;
     uint256 public totalInvestmentTarget;
