@@ -39,6 +39,8 @@ const INVESTMENT_PROPOSAL_GENERATOR_PROMPT = loadMarkdownPrompt(
   promptVariables,
 );
 
+const STATION_ASSET_ISSUER_PROMPT = ORCHESTRATOR_PROMPT;
+
 const OUT_OF_SCOPE_REPLY_PROMPT = loadMarkdownPrompt(
   path.join(PROMPTS_DIR, 'out-of-scope-reply.md'),
   promptVariables,
@@ -51,5 +53,6 @@ module.exports = {
   ORCHESTRATOR_PROMPT,
   STATION_FINDER_PROMPT,
   INVESTMENT_PROPOSAL_GENERATOR_PROMPT,
+  STATION_ASSET_ISSUER_PROMPT,
   OUT_OF_SCOPE_REPLY_PROMPT,
 };
