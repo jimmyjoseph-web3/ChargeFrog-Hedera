@@ -5,6 +5,7 @@ const AGENTS = Object.freeze({
   FOUNDRY: 'froggy_foundry',
   STATION_FINDER: 'station_finder',
   INVESTMENT_PROPOSAL_GENERATOR: 'investment_proposal_generator',
+  STATION_ASSET_ISSUER: 'station_asset_issuer',
 });
 
 const STATE = Object.freeze({
@@ -15,6 +16,7 @@ const STATE = Object.freeze({
   GET_TOKEN_BALANCE: 'GET_TOKEN_BALANCE',
   LIST_AVAILABLE_STATIONS: 'LIST_AVAILABLE_STATIONS',
   SHOW_INVESTMENT_CHOICES: 'SHOW_INVESTMENT_CHOICES',
+  ISSUE_ASSETS_AFTER_APPROVAL: 'ISSUE_ASSETS_AFTER_APPROVAL',
   BUY_EQUITY: 'BUY_EQUITY',
   BUY_BOND: 'BUY_BOND',
   GENERAL: 'GENERAL',
@@ -41,6 +43,20 @@ const TOOL_DEFINITIONS = Object.freeze([
   { name: 'findStationByLocation' },
   { name: 'getStation' },
   { name: 'getStationByProposalId' },
+  { name: 'listStationsByStage' },
+  { name: 'deployStationBundle' },
+  { name: 'saveStationDeployment' },
+  { name: 'generateISIN' },
+  { name: 'createEquityToken' },
+  { name: 'createBondToken' },
+  { name: 'saveIssuedAssets' },
+  { name: 'mintEquity' },
+  { name: 'mintBond' },
+  { name: 'issueEquity' },
+  { name: 'issueBond' },
+  { name: 'getTokenBalance' },
+  { name: 'listStationsAvailable' },
+  { name: 'listAllStations' },
 ]);
 
 const DECISION_POLICIES = Object.freeze({
@@ -107,6 +123,7 @@ const AGENT_PROMPT_REFS = Object.freeze({
   orchestrator: 'ORCHESTRATOR_PROMPT',
   stationFinder: 'STATION_FINDER_PROMPT',
   investmentProposalGenerator: 'INVESTMENT_PROPOSAL_GENERATOR_PROMPT',
+  stationAssetIssuer: 'STATION_ASSET_ISSUER_PROMPT',
   intent: 'INTENT_CLASSIFIER_PROMPT',
 });
 
