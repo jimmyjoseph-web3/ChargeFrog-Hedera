@@ -205,6 +205,41 @@ const server = http.createServer(async (req, res) => {
   ) {
     return handleApiRequest(req, res, createBond);
   }
+    if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/discovery/poi'
+  ) {
+    return handleApiRequest(req, res, findPoiByArea);
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'GET' &&
+    pathname === '/api/discovery/poi'
+  ) {
+    try {
+      const input = {
+        area: queryParamOrUndefined(requestUrl.searchParams, 'area'),
+        query:
+          queryParamOrUndefined(requestUrl.searchParams, 'q') ||
+          queryParamOrUndefined(requestUrl.searchParams, 'query'),
+        lat: queryNumberOrUndefined(requestUrl.searchParams, 'lat'),
+        lon: queryNumberOrUndefined(requestUrl.searchParams, 'lon'),
+        radius: queryNumberOrUndefined(requestUrl.searchParams, 'radius'),
+        limit: queryNumberOrUndefined(requestUrl.searchParams, 'limit'),
+      };
+      const data = await findPoiByArea(input);
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
 
   if (
     ENABLE_TEST_API_ROUTES &&

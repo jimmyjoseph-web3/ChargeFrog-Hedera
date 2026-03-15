@@ -176,7 +176,7 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
-            '/api/mini-nodes': {
+      '/api/mini-nodes': {
         post: {
           tags: ['MiniNodes'],
           summary:
@@ -304,6 +304,78 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           responses: {
             200: {
               description: 'Neighborhood count result',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/discovery/poi': {
+        get: {
+          tags: ['Discovery'],
+          summary:
+            'GET alias: resolve area/lat-lon to nearby POIs (q/query + optional radius/limit)',
+          parameters: [
+            { in: 'query', name: 'area', schema: { type: 'string' } },
+            { in: 'query', name: 'q', schema: { type: 'string' } },
+            { in: 'query', name: 'query', schema: { type: 'string' } },
+            { in: 'query', name: 'lat', schema: { type: 'number' } },
+            { in: 'query', name: 'lon', schema: { type: 'number' } },
+            { in: 'query', name: 'radius', schema: { type: 'integer' } },
+            { in: 'query', name: 'limit', schema: { type: 'integer' } },
+          ],
+          responses: {
+            200: {
+              description: 'POI results',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+        post: {
+          tags: ['Discovery'],
+          summary:
+            'Step 1: Find POIs from area/lat-lon, then use returned chargingAvailabilityId in step 2',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DiscoveryAreaRequest' },
+                examples: {
+                  cityBiasSearch: {
+                    summary: 'City search (recommended first call)',
+                    value: {
+                      area: 'Nottingham',
+                      query: 'ev charging station',
+                      limit: 20,
+                    },
+                  },
+                  radiusSearch: {
+                    summary: 'Hard radius filter search',
+                    value: {
+                      area: 'Nottingham',
+                      radius: 10000,
+                      query: 'ev charging station',
+                      limit: 20,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'POI results',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/SuccessResponse' },
