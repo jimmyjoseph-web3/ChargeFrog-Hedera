@@ -31,7 +31,11 @@ function buildOpenApiSpec(serverUrl, options = {}) {
   const tags = [{ name: 'Agent' }, { name: 'A2A' }];
   if (includeTestingRoutes) {
     tags.push(
+      { name: 'Contracts' },
       { name: 'ATS' },
+      { name: 'Discovery' },
+      { name: 'MiniNodes' },
+      { name: 'Stations' },
     );
   }
 
@@ -46,6 +50,53 @@ function buildOpenApiSpec(serverUrl, options = {}) {
     servers: serverList,
     tags,
     paths: {
+      '/api/contracts/deploy-station-bundle': {
+        post: {
+          tags: ['Contracts'],
+          summary:
+            'Deploy one Station + Shares bundle and wire Registry/Bolt in a single flow',
+          description:
+            'Uses the app-side admin signer and checked-in contract artifacts. The signer must own both Registry and Bolt.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/DeployStationBundleRequest',
+                },
+                examples: {
+                  default: {
+                    value: {
+                      stationName: 'ChargeFrog Station - Test Endpoint',
+                      projectUrl:
+                        'https://chargefrog.vercel.app/stations/test-endpoint',
+                      totalInvestmentHbar: '10',
+                      totalShares: '1000',
+                      stationMetadata: 'meta-test-endpoint',
+                      registryAddress:
+                        '0xE690102867901aaF25F960E95E65421e1cC78b07',
+                      boltAddress:
+                        '0x173E5D299fFECaE7856504164a157506859F486f',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Station bundle deployed and wired successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
       '/api/createEquity': {
         post: {
           tags: ['ATS'],
@@ -87,223 +138,6 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           responses: {
             200: {
               description: 'Bond token created',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/mint': {
-        post: {
-          tags: ['ATS'],
-          summary: 'Mint tokens to a target account',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/MintIssueRequest' },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Mint transaction submitted',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/issue': {
-        post: {
-          tags: ['ATS'],
-          summary: 'Issue tokens to a target account',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/MintIssueRequest' },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Issue transaction submitted',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/balance': {
-        post: {
-          tags: ['ATS'],
-          summary: 'Get token balance for an account',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/BalanceRequest' },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Current balance',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/mini-nodes': {
-        post: {
-          tags: ['MiniNodes'],
-          summary:
-            'Create a mini-node document (geo + walletAddress + timestamp)',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/MiniNodeCreateRequest' },
-                examples: {
-                  basic: {
-                    value: {
-                      lat: 1.299264,
-                      lon: 103.788009,
-                      walletAddress: '0.0.xxxxxxxx',
-                      timestamp: '2026-02-26T08:00:00.000Z',
-                    },
-                  },
-                  hedera: {
-                    value: {
-                      lat: 1.299264,
-                      lon: 103.788009,
-                      walletAddress: '0.0.xxxxxxxx',
-                      timestamp: '2026-02-26T08:00:00.000Z',
-                    },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Mini-node saved',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/mini-nodes/neighborhood': {
-        get: {
-          tags: ['MiniNodes'],
-          summary:
-            'GET alias: count mini-nodes around lat/lon using radiusMiles (default 25) or radiusMeters',
-          parameters: [
-            {
-              in: 'query',
-              name: 'lat',
-              required: true,
-              schema: { type: 'number' },
-            },
-            {
-              in: 'query',
-              name: 'lon',
-              required: true,
-              schema: { type: 'number' },
-            },
-            { in: 'query', name: 'radiusMiles', schema: { type: 'number' } },
-            { in: 'query', name: 'radiusMeters', schema: { type: 'integer' } },
-            { in: 'query', name: 'threshold', schema: { type: 'integer' } },
-            {
-              in: 'query',
-              name: 'triggerThreshold',
-              schema: { type: 'integer' },
-            },
-            {
-              in: 'query',
-              name: 'lookbackMinutes',
-              schema: { type: 'number' },
-            },
-            { in: 'query', name: 'since', schema: { type: 'string' } },
-            { in: 'query', name: 'until', schema: { type: 'string' } },
-          ],
-          responses: {
-            200: {
-              description: 'Neighborhood count result',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-        post: {
-          tags: ['MiniNodes'],
-          summary:
-            'Count mini-nodes around a requested lat/lon neighborhood and return centroid POI candidate',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/MiniNodeNeighborhoodRequest',
-                },
-                examples: {
-                  targeted: {
-                    value: {
-                      lat: 1.299264,
-                      lon: 103.788009,
-                      radiusMeters: 1200,
-                      triggerThreshold: 20,
-                    },
-                  },
-                  withLookback: {
-                    value: {
-                      lat: 1.299264,
-                      lon: 103.788009,
-                      radiusMeters: 1200,
-                      lookbackMinutes: 1440,
-                      triggerThreshold: 20,
-                    },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Neighborhood count result',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/SuccessResponse' },
@@ -469,6 +303,267 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
+      '/api/mini-nodes': {
+        post: {
+          tags: ['MiniNodes'],
+          summary:
+            'Create a mini-node document (geo + walletAddress + timestamp)',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MiniNodeCreateRequest' },
+                examples: {
+                  basic: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      walletAddress: '0.0.xxxxxxxx',
+                      timestamp: '2026-02-26T08:00:00.000Z',
+                    },
+                  },
+                  hedera: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      walletAddress: '0.0.xxxxxxxx',
+                      timestamp: '2026-02-26T08:00:00.000Z',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Mini-node saved',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/mini-nodes/neighborhood': {
+        get: {
+          tags: ['MiniNodes'],
+          summary:
+            'GET alias: count mini-nodes around lat/lon using radiusMiles (default 25) or radiusMeters',
+          parameters: [
+            {
+              in: 'query',
+              name: 'lat',
+              required: true,
+              schema: { type: 'number' },
+            },
+            {
+              in: 'query',
+              name: 'lon',
+              required: true,
+              schema: { type: 'number' },
+            },
+            { in: 'query', name: 'radiusMiles', schema: { type: 'number' } },
+            { in: 'query', name: 'radiusMeters', schema: { type: 'integer' } },
+            { in: 'query', name: 'threshold', schema: { type: 'integer' } },
+            {
+              in: 'query',
+              name: 'triggerThreshold',
+              schema: { type: 'integer' },
+            },
+            {
+              in: 'query',
+              name: 'lookbackMinutes',
+              schema: { type: 'number' },
+            },
+            { in: 'query', name: 'since', schema: { type: 'string' } },
+            { in: 'query', name: 'until', schema: { type: 'string' } },
+          ],
+          responses: {
+            200: {
+              description: 'Neighborhood count result',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+        post: {
+          tags: ['MiniNodes'],
+          summary:
+            'Count mini-nodes around a requested lat/lon neighborhood and return centroid POI candidate',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/MiniNodeNeighborhoodRequest',
+                },
+                examples: {
+                  targeted: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      radiusMeters: 1200,
+                      triggerThreshold: 20,
+                    },
+                  },
+                  withLookback: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      radiusMeters: 1200,
+                      lookbackMinutes: 1440,
+                      triggerThreshold: 20,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Neighborhood count result',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/stations/available': {
+        get: {
+          tags: ['Stations'],
+          summary: 'List stations currently in investment stage',
+          responses: {
+            200: {
+              description: 'Investable stations list',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/stations/{stationId}': {
+        get: {
+          tags: ['Stations'],
+          summary: 'Get station details by stationId',
+          parameters: [
+            {
+              in: 'path',
+              name: 'stationId',
+              required: true,
+              schema: { type: 'integer', minimum: 1 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Station details',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/mint': {
+        post: {
+          tags: ['ATS'],
+          summary: 'Mint tokens to a target account',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MintIssueRequest' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Mint transaction submitted',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/issue': {
+        post: {
+          tags: ['ATS'],
+          summary: 'Issue tokens to a target account',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MintIssueRequest' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Issue transaction submitted',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/balance': {
+        post: {
+          tags: ['ATS'],
+          summary: 'Get token balance for an account',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BalanceRequest' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Current balance',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
       '/api/agent/froggy-planner': {
         post: {
           tags: ['Agent'],
@@ -496,6 +591,386 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
+      '/api/agent/froggy-foundry': {
+        post: {
+          tags: ['Agent'],
+          summary:
+            'Testing harness: run FroggyFoundry for pending-admin review, approval, station deployment, and token issuance',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/FoundryAgentChatRequest',
+                },
+                examples: {
+                  attentionQueue: {
+                    value: {
+                      message: 'which stations require my attention',
+                    },
+                  },
+                  byProposalId: {
+                    value: {
+                      proposalId: 'proposal_1741856400000_abc123def4',
+                    },
+                  },
+                  byMessage: {
+                    value: {
+                      message:
+                        'deploy station and issue assets for proposal proposal_1741856400000_abc123def4',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Foundry response',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/.well-known/froggy-planner-agent.json': {
+        get: {
+          tags: ['A2A'],
+          summary: 'FroggyPlanner A2A discovery document',
+          responses: {
+            200: {
+              description: 'A2A agent discovery metadata',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/.well-known/froggy-planner-agent-card.json': {
+        get: {
+          tags: ['A2A'],
+          summary: 'FroggyPlanner A2A agent card',
+          responses: {
+            200: {
+              description: 'A2A agent card metadata',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/.well-known/froggy-foundry-agent.json': {
+        get: {
+          tags: ['A2A'],
+          summary: 'FroggyFoundry A2A discovery document',
+          responses: {
+            200: {
+              description: 'FroggyFoundry A2A discovery metadata',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/.well-known/froggy-foundry-agent-card.json': {
+        get: {
+          tags: ['A2A'],
+          summary: 'FroggyFoundry A2A agent card',
+          responses: {
+            200: {
+              description: 'FroggyFoundry A2A agent card metadata',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/a2a/froggy-planner': {
+        post: {
+          tags: ['A2A'],
+          summary: 'A2A JSON-RPC endpoint',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  additionalProperties: true,
+                },
+                examples: {
+                  sendMessage: {
+                    value: {
+                      jsonrpc: '2.0',
+                      id: '1',
+                      method: 'message/send',
+                      params: {
+                        message: {
+                          messageId: 'msg-1',
+                          role: 'user',
+                          parts: [
+                            {
+                              text: 'what stations are available right now?',
+                            },
+                          ],
+                          metadata: {
+                            walletAddress: '0.0.xxxxxxxx',
+                          },
+                        },
+                      },
+                    },
+                  },
+                  getTask: {
+                    value: {
+                      jsonrpc: '2.0',
+                      id: '2',
+                      method: 'tasks/get',
+                      params: {
+                        id: 'task-id-from-message-send',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'A2A JSON-RPC response',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                  examples: {
+                    completedTask: {
+                      value: {
+                        jsonrpc: '2.0',
+                        id: '1',
+                        result: {
+                          id: 'task-id',
+                          contextId: 'context-id',
+                          kind: 'task',
+                          status: {
+                            state: 'completed',
+                            message: {
+                              kind: 'message',
+                              messageId: 'agent-message-id',
+                              contextId: 'context-id',
+                              taskId: 'task-id',
+                              role: 'agent',
+                              parts: [
+                                {
+                                  kind: 'text',
+                                  text: 'There are 1 investable station(s) right now: station 1: ChargeFrog Station - Madison Square Garden (investment, equity 1 HBAR, bond 1 HBAR).',
+                                },
+                              ],
+                              metadata: {
+                                a2a: true,
+                                endpoint: '/a2a/froggy-planner',
+                                intent: 'LIST_AVAILABLE_STATIONS',
+                                status: 'listed',
+                              },
+                            },
+                          },
+                          artifacts: [
+                            {
+                              artifactId: 'artifact-id',
+                              name: 'planner-result',
+                              description:
+                                'Structured result from ChargeFrog Planner',
+                              parts: [
+                                {
+                                  kind: 'data',
+                                  data: {
+                                    intent: 'LIST_AVAILABLE_STATIONS',
+                                    status: 'listed',
+                                    reply:
+                                      'There are 1 investable station(s) right now.',
+                                    stations: [
+                                      {
+                                        stationId: 1,
+                                        stationName:
+                                          'ChargeFrog Station - Madison Square Garden',
+                                        stage: 'investment',
+                                      },
+                                    ],
+                                  },
+                                },
+                              ],
+                            },
+                          ],
+                          metadata: {
+                            source: 'chargefrog-planner',
+                            intent: 'LIST_AVAILABLE_STATIONS',
+                            status: 'listed',
+                            degraded: false,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/a2a/froggy-foundry': {
+        post: {
+          tags: ['A2A'],
+          summary: 'FroggyFoundry A2A JSON-RPC endpoint',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  additionalProperties: true,
+                },
+                examples: {
+                  sendMessage: {
+                    value: {
+                      jsonrpc: '2.0',
+                      id: '1',
+                      method: 'message/send',
+                      params: {
+                        message: {
+                          messageId: 'foundry-msg-1',
+                          role: 'user',
+                          parts: [
+                            {
+                              text: 'which stations require my attention?',
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  approveProposal: {
+                    value: {
+                      jsonrpc: '2.0',
+                      id: '2',
+                      method: 'message/send',
+                      params: {
+                        message: {
+                          messageId: 'foundry-msg-2',
+                          role: 'user',
+                          parts: [
+                            {
+                              text: 'approve proposal proposal_1741856400000_abc123def4',
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  getTask: {
+                    value: {
+                      jsonrpc: '2.0',
+                      id: '3',
+                      method: 'tasks/get',
+                      params: {
+                        id: 'task-id-from-message-send',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'FroggyFoundry A2A JSON-RPC response',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                  examples: {
+                    completedTask: {
+                      value: {
+                        jsonrpc: '2.0',
+                        id: '1',
+                        result: {
+                          id: 'foundry-task-id',
+                          contextId: 'foundry-context-id',
+                          kind: 'task',
+                          status: {
+                            state: 'completed',
+                            message: {
+                              kind: 'message',
+                              messageId: 'foundry-agent-message-id',
+                              contextId: 'foundry-context-id',
+                              taskId: 'foundry-task-id',
+                              role: 'agent',
+                              parts: [
+                                {
+                                  kind: 'text',
+                                  text: 'The station requiring your attention is station 8 (ChargeFrog Station - Madison Square Garden) proposal proposal_1741856400000_abc123def4; would you like to approve this station, this would mean deployment on hedera testnet through the chargefrog contracts, and the creation of equity and bond stations',
+                                },
+                              ],
+                              metadata: {
+                                a2a: true,
+                                endpoint: '/a2a/froggy-foundry',
+                                status: 'pending_admin_action_queue',
+                              },
+                            },
+                          },
+                          artifacts: [
+                            {
+                              artifactId: 'foundry-artifact-id',
+                              name: 'foundry-result',
+                              description:
+                                'Structured result from ChargeFrog Foundry',
+                              parts: [
+                                {
+                                  kind: 'data',
+                                  data: {
+                                    status: 'pending_admin_action_queue',
+                                    reply:
+                                      'The station requiring your attention is station 8 (ChargeFrog Station - Madison Square Garden) proposal proposal_1741856400000_abc123def4; would you like to approve this station, this would mean deployment on hedera testnet through the chargefrog contracts, and the creation of equity and bond stations',
+                                    stations: [
+                                      {
+                                        stationId: 8,
+                                        stationName:
+                                          'ChargeFrog Station - Madison Square Garden',
+                                        stage: 'pending-admin-action',
+                                        proposalId:
+                                          'proposal_1741856400000_abc123def4',
+                                      },
+                                    ],
+                                  },
+                                },
+                              ],
+                            },
+                          ],
+                          metadata: {
+                            source: 'chargefrog-froggyfoundry',
+                            status: 'pending_admin_action_queue',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     components: {
       responses: {
@@ -517,6 +992,202 @@ function buildOpenApiSpec(serverUrl, options = {}) {
         },
       },
       schemas: {
+        DiscoveryAreaRequest: {
+          type: 'object',
+          properties: {
+            area: {
+              type: 'string',
+              example: 'Barclays Center, New York',
+              description:
+                'Area/place text to resolve. Landmark queries are resolved via TomTom Search first, then geocode fallback. Optional if lat/lon are provided.',
+            },
+            lat: { type: 'number', example: 52.9548 },
+            lon: { type: 'number', example: -1.1581 },
+            radius: {
+              type: 'integer',
+              example: 10000,
+              description:
+                'Optional hard filter in meters. If omitted, TomTom does bias-only search around the area center. 500 means 500 meters only.',
+            },
+            limit: {
+              type: 'integer',
+              example: 10,
+              description: 'Max results (1..100).',
+            },
+            query: {
+              type: 'string',
+              example: 'ev charging station',
+              description:
+                'POI query. Defaults to "ev charging station" if omitted.',
+            },
+            openingHours: {
+              type: 'string',
+              example: 'nextSevenDays',
+              description:
+                'Optional opening-hours mode. Defaults to nextSevenDays.',
+            },
+            connectorSet: {
+              type: 'string',
+              example: 'IEC62196Type2CableAttached',
+            },
+            minPowerKW: { type: 'number', example: 50 },
+            maxPowerKW: { type: 'number', example: 350 },
+            categorySet: {
+              type: 'string',
+              example: '7315',
+            },
+            language: {
+              type: 'string',
+              example: 'en-US',
+            },
+          },
+          additionalProperties: true,
+        },
+        DiscoveryChargingAvailabilityRequest: {
+          type: 'object',
+          properties: {
+            chargingAvailabilityId: {
+              type: 'string',
+              example: 'XXX*YYY*ZZZ',
+              description:
+                'Single charging availability ID from /api/discovery/poi response: pointsOfInterest[].chargingAvailabilityId',
+            },
+            chargingAvailabilityIds: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['XXX*YYY*ZZZ', 'AAA*BBB*CCC'],
+              description:
+                'Batch charging availability IDs from /api/discovery/poi.',
+            },
+            connectorSet: {
+              type: 'string',
+              example: 'IEC62196Type2CableAttached',
+            },
+            minPowerKW: { type: 'number', example: 50 },
+            maxPowerKW: { type: 'number', example: 350 },
+          },
+          additionalProperties: true,
+        },
+        MiniNodeCreateRequest: {
+          type: 'object',
+          properties: {
+            lat: { type: 'number', example: 1.299264 },
+            lon: { type: 'number', example: 103.788009 },
+            walletAddress: {
+              type: 'string',
+              example: '0.0.xxxxxxxx',
+              description: 'Hedera account ID (0.0.x).',
+            },
+            timestamp: {
+              oneOf: [{ type: 'string' }, { type: 'number' }],
+              example: '2026-02-26T08:00:00.000Z',
+              description:
+                'Optional. ISO date string or unix timestamp (seconds or milliseconds). Defaults to now.',
+            },
+          },
+          required: ['lat', 'lon', 'walletAddress'],
+          additionalProperties: true,
+        },
+        MiniNodeNeighborhoodRequest: {
+          type: 'object',
+          properties: {
+            lat: { type: 'number', example: 1.299264 },
+            lon: { type: 'number', example: 103.788009 },
+            radiusMeters: {
+              type: 'integer',
+              example: 1200,
+              description:
+                'Neighborhood radius in meters around the requested lat/lon.',
+            },
+            triggerThreshold: {
+              type: 'integer',
+              example: 20,
+              description:
+                'If count >= triggerThreshold, shouldTriggerProposal=true.',
+            },
+            lookbackMinutes: {
+              type: 'number',
+              example: 1440,
+              description:
+                'Optional rolling window. If set, only docs from now-lookbackMinutes to now are counted.',
+            },
+            since: {
+              oneOf: [{ type: 'string' }, { type: 'number' }],
+              example: '2026-02-25T00:00:00.000Z',
+              description: 'Optional start time.',
+            },
+            until: {
+              oneOf: [{ type: 'string' }, { type: 'number' }],
+              example: '2026-02-26T23:59:59.000Z',
+              description: 'Optional end time.',
+            },
+            neighborLimit: {
+              type: 'integer',
+              example: 100,
+              description:
+                'Number of mini-node docs returned in response (max 1000).',
+            },
+          },
+          required: ['lat', 'lon'],
+          additionalProperties: true,
+        },
+        DeployStationBundleRequest: {
+          type: 'object',
+          properties: {
+            stationName: {
+              type: 'string',
+              example: 'ChargeFrog Station - Test Endpoint',
+            },
+            projectUrl: {
+              type: 'string',
+              example: 'https://chargefrog.vercel.app/stations/test-endpoint',
+            },
+            totalInvestmentHbar: {
+              type: 'string',
+              example: '10',
+              description:
+                'Preferred input. Human-readable HBAR amount; converted internally to 18-decimal wei/weibar units.',
+            },
+            totalInvestment: {
+              type: 'string',
+              example: '10000000000000000000',
+              description:
+                'Raw 18-decimal integer amount. Use this instead of totalInvestmentHbar if you want exact units.',
+            },
+            totalShares: {
+              type: 'string',
+              example: '1000',
+            },
+            stationMetadata: {
+              oneOf: [{ type: 'string' }, { type: 'object' }],
+              example: 'meta-test-endpoint',
+              description:
+                'Plain text, hex string, or JSON object. Non-hex values are UTF-8 encoded into bytes.',
+            },
+            initialFundAddress: {
+              type: 'string',
+              example: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+              description:
+                'Optional temporary fund address used during createStation. Defaults to the admin signer address before the Station address is written back.',
+            },
+            registryAddress: {
+              type: 'string',
+              example: '0xE690102867901aaF25F960E95E65421e1cC78b07',
+            },
+            boltAddress: {
+              type: 'string',
+              example: '0x173E5D299fFECaE7856504164a157506859F486f',
+            },
+            rpcUrl: {
+              type: 'string',
+              example: 'https://testnet.hashio.io/api',
+            },
+          },
+          required: ['stationName'],
+          additionalProperties: true,
+          description:
+            'Provide stationName plus one of totalInvestmentHbar or totalInvestment.',
+        },
         CreateTokenRequest: {
           type: 'object',
           properties: {
@@ -668,68 +1339,119 @@ function buildOpenApiSpec(serverUrl, options = {}) {
             targetId: { type: 'string', example: '0.0.7106098' },
           },
         },
-                MiniNodeCreateRequest: {
+        AgentChatRequest: {
           type: 'object',
           properties: {
-            lat: { type: 'number', example: 1.299264 },
-            lon: { type: 'number', example: 103.788009 },
+            message: {
+              type: 'string',
+              example: 'I want to find a station to invest in',
+            },
             walletAddress: {
               type: 'string',
               example: '0.0.xxxxxxxx',
-              description: 'Hedera account ID (0.0.x).',
-            },
-            timestamp: {
-              oneOf: [{ type: 'string' }, { type: 'number' }],
-              example: '2026-02-26T08:00:00.000Z',
               description:
-                'Optional. ISO date string or unix timestamp (seconds or milliseconds). Defaults to now.',
+                'Optional in request. Required only when registering mini-node interest or minting investments. Must be a Hedera account ID (0.0.x).',
             },
           },
-          required: ['lat', 'lon', 'walletAddress'],
-          additionalProperties: true,
+          required: ['message'],
+          additionalProperties: false,
         },
-        MiniNodeNeighborhoodRequest: {
+        FoundryAgentChatRequest: {
+          type: 'object',
+          description:
+            'FroggyFoundry always uses the configured admin signer. walletAddress is not accepted.',
+          properties: {
+            message: {
+              type: 'string',
+              example:
+                'deploy station and issue assets for proposal proposal_1741856400000_abc123def4',
+            },
+            proposalId: {
+              type: 'string',
+              example: 'proposal_1741856400000_abc123def4',
+              description:
+                'Preferred direct trigger. FroggyFoundry derives station deployment inputs from this proposal, deploys the station, then calls the station asset issuer.',
+            },
+            projectUrl: {
+              type: 'string',
+              example: 'https://chargefrog.vercel.app/stations/12',
+            },
+            stationMetadata: {
+              oneOf: [{ type: 'string' }, { type: 'object' }],
+              example: {
+                proposalId: 'proposal_1741856400000_abc123def4',
+                source: 'froggy-foundry',
+              },
+            },
+            totalInvestmentHbar: {
+              type: 'string',
+              example: '2500000',
+              description:
+                'Optional override. If omitted, FroggyFoundry uses proposal tokenizationInvestmentTerms.investmentTargetHbarEquivalent.',
+            },
+            totalInvestment: {
+              type: 'string',
+              example: '2500000000000000000000000',
+              description:
+                'Optional raw 18-decimal value override passed directly to deployStationBundle.',
+            },
+            totalShares: {
+              type: 'string',
+              example: '1000',
+              description:
+                'Optional override. If omitted, FroggyFoundry uses proposal tokenizationInvestmentTerms.totalSupply.equityShares.',
+            },
+            stationName: {
+              type: 'string',
+              example: 'ChargeFrog Station - Madison Square Garden',
+            },
+            initialFundAddress: {
+              type: 'string',
+              example: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+            },
+            registryAddress: {
+              type: 'string',
+              example: '0xE690102867901aaF25F960E95E65421e1cC78b07',
+            },
+            boltAddress: {
+              type: 'string',
+              example: '0x173E5D299fFECaE7856504164a157506859F486f',
+            },
+            rpcUrl: {
+              type: 'string',
+              example: 'https://testnet.hashio.io/api',
+            },
+            expectedStationId: {
+              type: 'string',
+              example: '12',
+              description:
+                'Optional safety override. Defaults to the proposal stationId and must match Registry.nextId before deployment.',
+            },
+            stationId: {
+              type: 'string',
+              example: '12',
+              description:
+                'Alias of expectedStationId.',
+            },
+          },
+          anyOf: [{ required: ['message'] }, { required: ['proposalId'] }],
+          additionalProperties: false,
+        },
+        SuccessResponse: {
           type: 'object',
           properties: {
-            lat: { type: 'number', example: 1.299264 },
-            lon: { type: 'number', example: 103.788009 },
-            radiusMeters: {
-              type: 'integer',
-              example: 1200,
-              description:
-                'Neighborhood radius in meters around the requested lat/lon.',
-            },
-            triggerThreshold: {
-              type: 'integer',
-              example: 20,
-              description:
-                'If count >= triggerThreshold, shouldTriggerProposal=true.',
-            },
-            lookbackMinutes: {
-              type: 'number',
-              example: 1440,
-              description:
-                'Optional rolling window. If set, only docs from now-lookbackMinutes to now are counted.',
-            },
-            since: {
-              oneOf: [{ type: 'string' }, { type: 'number' }],
-              example: '2026-02-25T00:00:00.000Z',
-              description: 'Optional start time.',
-            },
-            until: {
-              oneOf: [{ type: 'string' }, { type: 'number' }],
-              example: '2026-02-26T23:59:59.000Z',
-              description: 'Optional end time.',
-            },
-            neighborLimit: {
-              type: 'integer',
-              example: 100,
-              description:
-                'Number of mini-node docs returned in response (max 1000).',
-            },
+            ok: { type: 'boolean', example: true },
+            data: { type: 'object', additionalProperties: true },
           },
-          required: ['lat', 'lon'],
-          additionalProperties: true,
+          required: ['ok', 'data'],
+        },
+        ErrorResponse: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean', example: false },
+            error: { type: 'string' },
+          },
+          required: ['ok', 'error'],
         },
       },
     },
