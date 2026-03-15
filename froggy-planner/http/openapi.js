@@ -176,6 +176,145 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
+            '/api/mini-nodes': {
+        post: {
+          tags: ['MiniNodes'],
+          summary:
+            'Create a mini-node document (geo + walletAddress + timestamp)',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MiniNodeCreateRequest' },
+                examples: {
+                  basic: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      walletAddress: '0.0.xxxxxxxx',
+                      timestamp: '2026-02-26T08:00:00.000Z',
+                    },
+                  },
+                  hedera: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      walletAddress: '0.0.xxxxxxxx',
+                      timestamp: '2026-02-26T08:00:00.000Z',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Mini-node saved',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/mini-nodes/neighborhood': {
+        get: {
+          tags: ['MiniNodes'],
+          summary:
+            'GET alias: count mini-nodes around lat/lon using radiusMiles (default 25) or radiusMeters',
+          parameters: [
+            {
+              in: 'query',
+              name: 'lat',
+              required: true,
+              schema: { type: 'number' },
+            },
+            {
+              in: 'query',
+              name: 'lon',
+              required: true,
+              schema: { type: 'number' },
+            },
+            { in: 'query', name: 'radiusMiles', schema: { type: 'number' } },
+            { in: 'query', name: 'radiusMeters', schema: { type: 'integer' } },
+            { in: 'query', name: 'threshold', schema: { type: 'integer' } },
+            {
+              in: 'query',
+              name: 'triggerThreshold',
+              schema: { type: 'integer' },
+            },
+            {
+              in: 'query',
+              name: 'lookbackMinutes',
+              schema: { type: 'number' },
+            },
+            { in: 'query', name: 'since', schema: { type: 'string' } },
+            { in: 'query', name: 'until', schema: { type: 'string' } },
+          ],
+          responses: {
+            200: {
+              description: 'Neighborhood count result',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+        post: {
+          tags: ['MiniNodes'],
+          summary:
+            'Count mini-nodes around a requested lat/lon neighborhood and return centroid POI candidate',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/MiniNodeNeighborhoodRequest',
+                },
+                examples: {
+                  targeted: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      radiusMeters: 1200,
+                      triggerThreshold: 20,
+                    },
+                  },
+                  withLookback: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      radiusMeters: 1200,
+                      lookbackMinutes: 1440,
+                      triggerThreshold: 20,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Neighborhood count result',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
     },
     components: {
       responses: {
@@ -347,6 +486,69 @@ function buildOpenApiSpec(serverUrl, options = {}) {
             stationId: { type: 'integer', example: 1 },
             targetId: { type: 'string', example: '0.0.7106098' },
           },
+        },
+                MiniNodeCreateRequest: {
+          type: 'object',
+          properties: {
+            lat: { type: 'number', example: 1.299264 },
+            lon: { type: 'number', example: 103.788009 },
+            walletAddress: {
+              type: 'string',
+              example: '0.0.xxxxxxxx',
+              description: 'Hedera account ID (0.0.x).',
+            },
+            timestamp: {
+              oneOf: [{ type: 'string' }, { type: 'number' }],
+              example: '2026-02-26T08:00:00.000Z',
+              description:
+                'Optional. ISO date string or unix timestamp (seconds or milliseconds). Defaults to now.',
+            },
+          },
+          required: ['lat', 'lon', 'walletAddress'],
+          additionalProperties: true,
+        },
+        MiniNodeNeighborhoodRequest: {
+          type: 'object',
+          properties: {
+            lat: { type: 'number', example: 1.299264 },
+            lon: { type: 'number', example: 103.788009 },
+            radiusMeters: {
+              type: 'integer',
+              example: 1200,
+              description:
+                'Neighborhood radius in meters around the requested lat/lon.',
+            },
+            triggerThreshold: {
+              type: 'integer',
+              example: 20,
+              description:
+                'If count >= triggerThreshold, shouldTriggerProposal=true.',
+            },
+            lookbackMinutes: {
+              type: 'number',
+              example: 1440,
+              description:
+                'Optional rolling window. If set, only docs from now-lookbackMinutes to now are counted.',
+            },
+            since: {
+              oneOf: [{ type: 'string' }, { type: 'number' }],
+              example: '2026-02-25T00:00:00.000Z',
+              description: 'Optional start time.',
+            },
+            until: {
+              oneOf: [{ type: 'string' }, { type: 'number' }],
+              example: '2026-02-26T23:59:59.000Z',
+              description: 'Optional end time.',
+            },
+            neighborLimit: {
+              type: 'integer',
+              example: 100,
+              description:
+                'Number of mini-node docs returned in response (max 1000).',
+            },
+          },
+          required: ['lat', 'lon'],
+          additionalProperties: true,
         },
       },
     },

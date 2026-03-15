@@ -230,6 +230,65 @@ const server = http.createServer(async (req, res) => {
     return handleApiRequest(req, res, getBalance);
   }
 
+    if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/mini-nodes'
+  ) {
+    return handleApiRequest(req, res, createMiniNode);
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/mini-nodes/neighborhood'
+  ) {
+    return handleApiRequest(req, res, countMiniNodesInNeighborhood);
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'GET' &&
+    pathname === '/api/mini-nodes/neighborhood'
+  ) {
+    try {
+      const radiusMiles = queryNumberOrUndefined(
+        requestUrl.searchParams,
+        'radiusMiles',
+      );
+      const radiusMeters =
+        queryNumberOrUndefined(requestUrl.searchParams, 'radiusMeters') ||
+        (Number.isFinite(radiusMiles)
+          ? Math.trunc(radiusMiles * MILES_TO_METERS)
+          : undefined);
+
+      const input = {
+        lat: queryNumberOrUndefined(requestUrl.searchParams, 'lat'),
+        lon: queryNumberOrUndefined(requestUrl.searchParams, 'lon'),
+        radiusMeters,
+        triggerThreshold:
+          queryNumberOrUndefined(requestUrl.searchParams, 'threshold') ||
+          queryNumberOrUndefined(requestUrl.searchParams, 'triggerThreshold'),
+        lookbackMinutes: queryNumberOrUndefined(
+          requestUrl.searchParams,
+          'lookbackMinutes',
+        ),
+        since: queryParamOrUndefined(requestUrl.searchParams, 'since'),
+        until: queryParamOrUndefined(requestUrl.searchParams, 'until'),
+      };
+
+      const data = await countMiniNodesInNeighborhood(input);
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
+
   return sendJson(res, 404, { ok: false, error: 'Route not found' });
 });
 
