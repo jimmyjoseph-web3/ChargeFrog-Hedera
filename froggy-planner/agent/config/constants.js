@@ -1,5 +1,3 @@
-const PROMPT_VERSION = 'v2-prod-2026-03-15';
-
 const AGENTS = Object.freeze({
   ORCHESTRATOR: 'orchestrator',
   FOUNDRY: 'froggy_foundry',
@@ -16,9 +14,9 @@ const STATE = Object.freeze({
   GET_TOKEN_BALANCE: 'GET_TOKEN_BALANCE',
   LIST_AVAILABLE_STATIONS: 'LIST_AVAILABLE_STATIONS',
   SHOW_INVESTMENT_CHOICES: 'SHOW_INVESTMENT_CHOICES',
-  ISSUE_ASSETS_AFTER_APPROVAL: 'ISSUE_ASSETS_AFTER_APPROVAL',
   BUY_EQUITY: 'BUY_EQUITY',
   BUY_BOND: 'BUY_BOND',
+  ISSUE_ASSETS_AFTER_APPROVAL: 'ISSUE_ASSETS_AFTER_APPROVAL',
   GENERAL: 'GENERAL',
 });
 
@@ -40,16 +38,10 @@ const TOOL_DEFINITIONS = Object.freeze([
   { name: 'createInvestmentProposal' },
   { name: 'readOnChainProposal' },
   { name: 'readOffChainMetadata' },
-  { name: 'findStationByLocation' },
-  { name: 'getStation' },
-  { name: 'getStationByProposalId' },
-  { name: 'listStationsByStage' },
-  { name: 'deployStationBundle' },
-  { name: 'saveStationDeployment' },
   { name: 'generateISIN' },
+  { name: 'deployStationBundle' },
   { name: 'createEquityToken' },
   { name: 'createBondToken' },
-  { name: 'saveIssuedAssets' },
   { name: 'mintEquity' },
   { name: 'mintBond' },
   { name: 'issueEquity' },
@@ -57,6 +49,12 @@ const TOOL_DEFINITIONS = Object.freeze([
   { name: 'getTokenBalance' },
   { name: 'listStationsAvailable' },
   { name: 'listAllStations' },
+  { name: 'listStationsByStage' },
+  { name: 'findStationByLocation' },
+  { name: 'getStation' },
+  { name: 'getStationByProposalId' },
+  { name: 'saveStationDeployment' },
+  { name: 'saveIssuedAssets' },
 ]);
 
 const DECISION_POLICIES = Object.freeze({
