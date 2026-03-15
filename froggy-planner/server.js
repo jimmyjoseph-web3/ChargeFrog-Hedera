@@ -7,9 +7,30 @@ const {
   issue,
   getBalance,
 } = require('./clients/atsClient');
-const { buildOpenApiSpec, getDocsHtml } = require('./http/openapi');
+const {
+  runAgent,
+  runFoundryAgent,
+  runFoundryWorker,
+  runStationFinderAgent,
+  runInvestmentProposalGeneratorAgent,
+  runStationAssetIssuerWorker,
+} = require('./agent/core/orchestrator');
+const { PUBLIC_A2A_AGENT_METADATA } = require('./http/publicAgentMetadata');
+const {
+  findPoiByArea,
+  findChargingStationsByAvailability,
+} = require('./clients/tomtomClient');
+const {
+  createMiniNode,
+  countMiniNodesInNeighborhood,
+} = require('./store/miniNodeStore');
+const {
+  listAvailableStations,
+  getStationById,
+} = require('./store/stationStore');
 
 const PORT = Number(process.env.PORT || 8787);
+const MILES_TO_METERS = 1609.344;
 const BASE_URL = `http://localhost:${PORT}`;
 
 function isTruthyEnvFlag(value) {
@@ -48,6 +69,13 @@ const ENABLE_TEST_API_ROUTES =
   process.env.ENABLE_TEST_API_ROUTES !== undefined
     ? isTruthyEnvFlag(process.env.ENABLE_TEST_API_ROUTES)
     : RUNTIME_ENV !== 'production';
+const PUBLIC_WELL_KNOWN_ROUTES = Object.freeze(
+  Object.values(PUBLIC_A2A_AGENT_METADATA).reduce((routes, agent) => {
+    routes[agent.discoveryPath] = agent.key;
+    routes[agent.agentCardPath] = agent.key;
+    return routes;
+  }, {}),
+);
 
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -114,7 +142,26 @@ function looksLikeBadRequest(error) {
     message.includes('amount') ||
     message.includes('startingdate') ||
     message.includes('maturitydate') ||
-    message.includes('walletaddress')
+    message.includes('area') ||
+    message.includes('lat/lon') ||
+    message.includes('chargingavailabilityid') ||
+    message.includes('walletaddress') ||
+    message.includes('lat and lon') ||
+    message.includes('radiusmeters') ||
+    message.includes('timestamp') ||
+    message.includes('mongodb') ||
+    message.includes('stationname') ||
+    message.includes('tokenid') ||
+    message.includes('accountid') ||
+    message.includes('privatekey') ||
+    message.includes('registryaddress') ||
+    message.includes('boltaddress') ||
+    message.includes('stationmetadata') ||
+    message.includes('totalinvestment') ||
+    message.includes('totalshares') ||
+    message.includes('projecturl') ||
+    message.includes('nextid mismatch') ||
+    message.includes('investmenttargethbarequivalent')
   );
 }
 
@@ -190,6 +237,41 @@ const server = http.createServer(async (req, res) => {
     return sendHtml(res, 200, getDocsHtml());
   }
 
+  if (req.method === 'GET' && PUBLIC_WELL_KNOWN_ROUTES[pathname]) {
+    return sendJsonNoStore(
+      res,
+      200,
+      buildAgentCard(makeServerUrl(req), PUBLIC_WELL_KNOWN_ROUTES[pathname]),
+    );
+  }
+
+  if (
+    req.method === 'POST' &&
+    pathname === '/a2a/investment-proposal-generator'
+  ) {
+    if (!requireInternalA2aAccess(req, res)) return;
+    return handleA2aEndpoint(req, res, {
+      agentKey: 'investmentProposalGenerator',
+      runner: runInvestmentProposalGeneratorAgent,
+    });
+  }
+
+  if (req.method === 'POST' && pathname === '/a2a/station-asset-issuer') {
+    if (!requireInternalA2aAccess(req, res)) return;
+    return handleA2aEndpoint(req, res, {
+      agentKey: 'stationAssetIssuer',
+      runner: runStationAssetIssuerWorker,
+    });
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/contracts/deploy-station-bundle'
+  ) {
+    return handleApiRequest(req, res, deployStationBundle);
+  }
+
   if (
     ENABLE_TEST_API_ROUTES &&
     req.method === 'POST' &&
@@ -205,7 +287,8 @@ const server = http.createServer(async (req, res) => {
   ) {
     return handleApiRequest(req, res, createBond);
   }
-    if (
+
+  if (
     ENABLE_TEST_API_ROUTES &&
     req.method === 'POST' &&
     pathname === '/api/discovery/poi'
@@ -244,28 +327,52 @@ const server = http.createServer(async (req, res) => {
   if (
     ENABLE_TEST_API_ROUTES &&
     req.method === 'POST' &&
-    pathname === '/api/mint'
+    pathname === '/api/discovery/charging-stations'
   ) {
-    return handleApiRequest(req, res, mint);
+    return handleApiRequest(req, res, findChargingStationsByAvailability);
   }
 
   if (
     ENABLE_TEST_API_ROUTES &&
-    req.method === 'POST' &&
-    pathname === '/api/issue'
+    req.method === 'GET' &&
+    pathname === '/api/ev/chargingAvailability'
   ) {
-    return handleApiRequest(req, res, issue);
+    try {
+      const single =
+        queryParamOrUndefined(
+          requestUrl.searchParams,
+          'chargingAvailabilityId',
+        ) || queryParamOrUndefined(requestUrl.searchParams, 'id');
+      const manyRaw =
+        queryParamOrUndefined(
+          requestUrl.searchParams,
+          'chargingAvailabilityIds',
+        ) || queryParamOrUndefined(requestUrl.searchParams, 'ids');
+
+      const chargingAvailabilityIds = manyRaw
+        ? manyRaw
+            .split(',')
+            .map((item) => String(item).trim())
+            .filter((item) => item !== '')
+        : undefined;
+
+      const input = {
+        chargingAvailabilityId: single,
+        chargingAvailabilityIds,
+      };
+      const data = await findChargingStationsByAvailability(input);
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
   }
 
   if (
-    ENABLE_TEST_API_ROUTES &&
-    req.method === 'POST' &&
-    pathname === '/api/balance'
-  ) {
-    return handleApiRequest(req, res, getBalance);
-  }
-
-    if (
     ENABLE_TEST_API_ROUTES &&
     req.method === 'POST' &&
     pathname === '/api/mini-nodes'
@@ -324,43 +431,13 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-    if (
-    ENABLE_TEST_API_ROUTES &&
-    req.method === 'POST' &&
-    pathname === '/api/discovery/charging-stations'
-  ) {
-    return handleApiRequest(req, res, findChargingStationsByAvailability);
-  }
-
   if (
     ENABLE_TEST_API_ROUTES &&
     req.method === 'GET' &&
-    pathname === '/api/ev/chargingAvailability'
+    pathname === '/api/stations/available'
   ) {
     try {
-      const single =
-        queryParamOrUndefined(
-          requestUrl.searchParams,
-          'chargingAvailabilityId',
-        ) || queryParamOrUndefined(requestUrl.searchParams, 'id');
-      const manyRaw =
-        queryParamOrUndefined(
-          requestUrl.searchParams,
-          'chargingAvailabilityIds',
-        ) || queryParamOrUndefined(requestUrl.searchParams, 'ids');
-
-      const chargingAvailabilityIds = manyRaw
-        ? manyRaw
-            .split(',')
-            .map((item) => String(item).trim())
-            .filter((item) => item !== '')
-        : undefined;
-
-      const input = {
-        chargingAvailabilityId: single,
-        chargingAvailabilityIds,
-      };
-      const data = await findChargingStationsByAvailability(input);
+      const data = await listAvailableStations();
       return sendJson(res, 200, { ok: true, data });
     } catch (error) {
       const statusCode = looksLikeBadRequest(error) ? 400 : 500;
@@ -372,7 +449,54 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-    if (
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'GET' &&
+    /^\/api\/stations\/[^/]+$/.test(pathname)
+  ) {
+    try {
+      const stationIdRaw = pathname.split('/').pop();
+      const stationId = Number(stationIdRaw);
+      if (!Number.isFinite(stationId) || stationId <= 0) {
+        throw new Error('stationId must be a positive integer');
+      }
+      const data = await getStationById(Math.trunc(stationId));
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/mint'
+  ) {
+    return handleApiRequest(req, res, mint);
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/issue'
+  ) {
+    return handleApiRequest(req, res, issue);
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/balance'
+  ) {
+    return handleApiRequest(req, res, getBalance);
+  }
+
+  if (
     ENABLE_TEST_API_ROUTES &&
     req.method === 'POST' &&
     pathname === '/api/agent/froggy-planner'
@@ -380,8 +504,25 @@ const server = http.createServer(async (req, res) => {
     return handleApiRequest(req, res, runAgent);
   }
 
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/agent/froggy-foundry'
+  ) {
+    return handleApiRequest(req, res, runFoundryAgent);
+  }
 
-
+  if (
+    !ENABLE_TEST_API_ROUTES &&
+    pathname.startsWith('/api/') &&
+    pathname !== '/api/openapi.json'
+  ) {
+    return sendJson(res, 404, {
+      ok: false,
+      error:
+        '',
+    });
+  }
 
   return sendJson(res, 404, { ok: false, error: 'Route not found' });
 });
