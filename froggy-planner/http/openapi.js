@@ -387,7 +387,7 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
-            '/api/discovery/charging-stations': {
+      '/api/discovery/charging-stations': {
         post: {
           tags: ['Discovery'],
           summary:
@@ -458,6 +458,33 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           responses: {
             200: {
               description: 'Charging station results',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/agent/froggy-planner': {
+        post: {
+          tags: ['Agent'],
+          summary:
+            'Testing harness: run FroggyPlanner for station discovery, proposal creation, and investment workflows',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AgentChatRequest' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Agent response',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/SuccessResponse' },
