@@ -39,7 +39,10 @@ const INVESTMENT_PROPOSAL_GENERATOR_PROMPT = loadMarkdownPrompt(
   promptVariables,
 );
 
-const STATION_ASSET_ISSUER_PROMPT = ORCHESTRATOR_PROMPT;
+const STATION_ASSET_ISSUER_PROMPT = loadMarkdownPrompt(
+  path.join(PROMPTS_DIR, 'station-asset-issuer.md'),
+  promptVariables,
+);
 
 const OUT_OF_SCOPE_REPLY_PROMPT = loadMarkdownPrompt(
   path.join(PROMPTS_DIR, 'out-of-scope-reply.md'),
