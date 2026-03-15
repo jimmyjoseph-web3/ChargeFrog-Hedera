@@ -244,6 +244,28 @@ function normalizeStationName(value, fallback = 'Station') {
   return String(fallback).replace(/\s+/g, ' ').trim() || 'Station';
 }
 
+function buildTokenSymbol(stationName, stationId, suffix = '') {
+  const normalizedName = normalizeStationName(stationName, 'ChargeFrog Station')
+    .toUpperCase()
+    .split(/\s+/)
+    .filter((token) => token && token !== 'CHARGEFROG' && token !== 'STATION');
+  const base =
+    normalizedName
+      .slice(0, 3)
+      .map((token) => token.replace(/[^A-Z0-9]/g, '').slice(0, 2))
+      .join('') || 'CF';
+  const normalizedStationId = toPositiveWholeNumber(stationId);
+  const stationPart = normalizedStationId
+    ? String(normalizedStationId).slice(-4)
+    : '0000';
+  const suffixPart = String(suffix || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 3);
+
+  return `${base}${stationPart}${suffixPart}`.slice(0, 12);
+}
+
 function parseIntentRuleBased(message) {
   const text = String(message || '').toLowerCase();
   const stationSpecificIntent = inferStationSpecificIntent(message);
@@ -360,6 +382,7 @@ module.exports = {
   isInvestmentExecutionMessage,
   toPositiveWholeNumber,
   normalizeStationName,
+  buildTokenSymbol,
   parseIntentRuleBased,
   normalizeWorkflowIntent,
   isDomainScopedMessage,
