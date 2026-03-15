@@ -10,19 +10,29 @@ const {
   normalizeReasoningEffort,
 } = require('./shared');
 const {
+  parseLocation,
   parseLatLonFromMessage,
   normalizeAreaForTomTom,
   parseStationId,
   parseStationNameHint,
   findBestStationByNameHint,
+  parseProposalId,
   parseAmount,
   parseRequestedAssetType,
   isBalanceQueryMessage,
   isInvestmentExecutionMessage,
   toPositiveWholeNumber,
+  normalizeStationName,
+  buildTokenSymbol,
   normalizeWorkflowIntent,
   evaluateChatDomainScope,
 } = require('./parsing');
+const {
+  resolveProposalPayload,
+  resolveSuppliesFromProposalPayload,
+  buildAssetMetadataFromProposal,
+  buildTokenCreateOverridesFromProposal,
+} = require('./proposalPayloads');
 const {
   summarizeAvailability,
   computeStationScore,
@@ -47,6 +57,7 @@ const {
   ORCHESTRATOR_PROMPT,
   STATION_FINDER_PROMPT,
   INVESTMENT_PROPOSAL_GENERATOR_PROMPT,
+  STATION_ASSET_ISSUER_PROMPT,
 } = require('../config/prompts');
 
 const AGENT_PROMPTS = {
@@ -54,18 +65,23 @@ const AGENT_PROMPTS = {
   orchestrator: ORCHESTRATOR_PROMPT,
   stationFinder: STATION_FINDER_PROMPT,
   investmentProposalGenerator: INVESTMENT_PROPOSAL_GENERATOR_PROMPT,
+  stationAssetIssuer: STATION_ASSET_ISSUER_PROMPT,
 };
 
 // Runtime behavior: the public coordinator delegates to internal worker agents
 // over internal A2A, and worker agents invoke local tools directly.
 let initPromise;
 const PLANNER_WORKER_ENDPOINTS = Object.freeze({
+  froggyFoundry: '/a2a/froggy-foundry',
   stationFinder: '/a2a/station-finder',
   investmentProposalGenerator: '/a2a/investment-proposal-generator',
+  stationAssetIssuer: '/a2a/station-asset-issuer',
 });
 
 const PENDING_ADMIN_ACTION_REPLY =
-  'Thank you for your interest! We are so happy with the successful funding of this station, now we need the ChargeFrog Team to greenlight the deployment of this station.';
+  'Thank you for your interest! We are so happy with the successful funding of this station, now we need the ChargeFrog Team to greenlight the deployment and issuance of equity and bond tokens.';
+const FOUNDRY_APPROVAL_REPLY =
+  'would you like to approve this station, this would mean deployment on hedera testnet through the chargefrog contracts, and the creation of equity and bond stations';
 
 // Handles callTool.
 async function callTool({
@@ -181,6 +197,22 @@ async function callPlannerWorkerAgent({
     correlationId,
     action,
   });
+}
+
+function buildDefaultFoundryProjectUrl(stationId) {
+  const rawBase = String(
+    process.env.CHARGEFROG_STATION_PROJECT_BASE_URL ||
+      process.env.FROGGY_PLANNER_PUBLIC_BASE_URL ||
+      'https://chargefrog.vercel.app',
+  )
+    .trim()
+    .replace(/\/$/, '');
+
+  const normalizedStationId = toPositiveWholeNumber(stationId);
+  if (!normalizedStationId) {
+    return `${rawBase}/stations`;
+  }
+  return `${rawBase}/stations/${normalizedStationId}`;
 }
 
 // Handles ensureWalletForAction.
@@ -790,6 +822,1061 @@ async function runInvestmentProposalGeneratorAgent({
   };
 }
 
+// Handles runStationAssetIssuerAgent.
+async function runStationAssetIssuerAgent({ message, correlationId }) {
+  const toolTrace = [];
+  const proposalId = parseProposalId(message);
+  if (!proposalId) {
+    return {
+      status: 'missing_proposal_id',
+      reply:
+        'To issue station assets, provide a proposal ID. Example: "issue assets for proposal proposal_123".',
+      toolTrace,
+    };
+  }
+
+  const onChainProposal = await callTool({
+    correlationId,
+    agent: AGENTS.STATION_ASSET_ISSUER,
+    toolName: 'readOnChainProposal',
+    args: { proposalId },
+  });
+  toolTrace.push({
+    tool: 'readOnChainProposal',
+    arguments: { proposalId },
+    resultSummary: {
+      status: onChainProposal.data.status,
+      metadataUri: onChainProposal.data.metadataUri,
+      stationId: onChainProposal.data.stationId,
+    },
+  });
+
+  const stationSnapshot = await loadStationSnapshotForProposal({
+    correlationId,
+    agent: AGENTS.STATION_ASSET_ISSUER,
+    proposalId,
+    fallbackStationId: onChainProposal.data.stationId,
+    toolTrace,
+  });
+  const resolvedStation = stationSnapshot.ok ? stationSnapshot.data : null;
+  const resolvedStationId = toPositiveWholeNumber(
+    resolvedStation?.stationId ?? onChainProposal.data.stationId,
+  );
+  if (!resolvedStationId) {
+    throw new Error('proposal stationId is missing; cannot issue assets');
+  }
+  const hasEquityToken = Boolean(resolvedStation?.equityTokenAddress);
+  const hasBondToken = Boolean(resolvedStation?.bondTokenAddress);
+  if (hasEquityToken && hasBondToken) {
+    return {
+      status: 'already_issued',
+      reply: `Station ${resolvedStationId} already has equity and bond tokens. Duplicate issuance is blocked.`,
+      proposalId,
+      stationId: resolvedStationId,
+      station: resolvedStation,
+      toolTrace,
+    };
+  }
+  if (hasEquityToken || hasBondToken) {
+    return {
+      status: 'partial_assets_exist',
+      reply:
+        `Station ${resolvedStationId} already has a token address recorded. ` +
+        'Issuance is blocked to avoid duplicate token creation.',
+      proposalId,
+      stationId: resolvedStationId,
+      station: resolvedStation,
+      toolTrace,
+    };
+  }
+
+  if (onChainProposal.data.status === 'issued') {
+    return {
+      status: 'already_issued',
+      reply: `Proposal ${proposalId} is already issued. Returning current station asset state.`,
+      proposalId,
+      stationId: resolvedStationId,
+      station: resolvedStation,
+      toolTrace,
+    };
+  }
+
+  const offChainMetadata = await callTool({
+    correlationId,
+    agent: AGENTS.STATION_ASSET_ISSUER,
+    toolName: 'readOffChainMetadata',
+    args: { metadataUri: onChainProposal.data.metadataUri },
+  });
+  toolTrace.push({
+    tool: 'readOffChainMetadata',
+    arguments: { metadataUri: onChainProposal.data.metadataUri },
+    resultSummary: {
+      cap: offChainMetadata.data.cap,
+      shares: offChainMetadata.data.shares,
+      pricing: offChainMetadata.data.pricing,
+    },
+  });
+
+  const proposalPayload = resolveProposalPayload(
+    onChainProposal.data,
+    offChainMetadata.data,
+  );
+  if (!proposalPayload) {
+    throw new Error(
+      'Proposal payload is missing. Cannot issue assets without explicit tokenizationInvestmentTerms.',
+    );
+  }
+
+  const proposalSupply = resolveSuppliesFromProposalPayload(proposalPayload);
+  const stationId = resolvedStationId;
+  const stationName = normalizeStationName(
+    resolvedStation?.stationName ||
+      proposalPayload?.tokenizationInvestmentTerms?.stationName ||
+      offChainMetadata.data?.stationDetails?.metadata?.proposedStationName ||
+      offChainMetadata.data?.stationDetails?.metadata?.area,
+    `Station-${stationId}`,
+  );
+  const equitySymbol = buildTokenSymbol(stationName, stationId, 'EQ');
+  const bondSymbol = buildTokenSymbol(stationName, stationId, 'BD');
+  const equityShares = proposalSupply.equityShares;
+  const bondUnits = proposalSupply.bondUnits;
+  const cap = Number(
+    proposalSupply.hardCap ||
+      offChainMetadata.data.cap ||
+      onChainProposal.data.cap ||
+      Math.max(equityShares, bondUnits),
+  );
+  const pricing = {
+    equityPriceHbar: Number(
+      offChainMetadata.data?.pricing?.equityPriceHbar ||
+        onChainProposal.data?.pricing?.equityPriceHbar ||
+        1,
+    ),
+    bondPriceHbar: Number(
+      offChainMetadata.data?.pricing?.bondPriceHbar ||
+        onChainProposal.data?.pricing?.bondPriceHbar ||
+        1,
+    ),
+  };
+
+  const equityIsin = await callTool({
+    correlationId,
+    agent: AGENTS.STATION_ASSET_ISSUER,
+    toolName: 'generateISIN',
+    args: { stationId, assetType: 'equity' },
+  });
+  toolTrace.push({
+    tool: 'generateISIN',
+    arguments: { stationId, assetType: 'equity' },
+    resultSummary: equityIsin.data,
+  });
+
+  const bondIsin = await callTool({
+    correlationId,
+    agent: AGENTS.STATION_ASSET_ISSUER,
+    toolName: 'generateISIN',
+    args: { stationId, assetType: 'bond' },
+  });
+  toolTrace.push({
+    tool: 'generateISIN',
+    arguments: { stationId, assetType: 'bond' },
+    resultSummary: bondIsin.data,
+  });
+
+  const equityToken = await callTool({
+    correlationId,
+    agent: AGENTS.STATION_ASSET_ISSUER,
+    toolName: 'createEquityToken',
+    args: {
+      ...buildTokenCreateOverridesFromProposal({
+        proposalPayload,
+        stationName,
+        assetType: 'equity',
+      }),
+      stationId,
+      isin_number: equityIsin.data.isin_number || equityIsin.data.isin,
+      stationName,
+      name: `ChargeFrog-${stationName}`,
+      symbol: equitySymbol,
+      totalShares: String(equityShares),
+      pricePerShare: String(pricing.equityPriceHbar),
+      cap: String(cap),
+      metadata: buildAssetMetadataFromProposal({
+        proposalId,
+        stationId,
+        metadataUri: onChainProposal.data.metadataUri,
+        proposalPayload,
+        assetType: 'equity',
+        isinNumber: equityIsin.data.isin_number || equityIsin.data.isin,
+        totalSupply: equityShares,
+        pricePerUnitHbar: pricing.equityPriceHbar,
+        cap,
+      }),
+      correlationId,
+    },
+  });
+  toolTrace.push({
+    tool: 'createEquityToken',
+    arguments: {
+      stationId,
+      isin_number: equityIsin.data.isin_number || equityIsin.data.isin,
+      totalShares: String(equityShares),
+    },
+    resultSummary: {
+      tokenAddress: equityToken.data.tokenAddress,
+      txHash: equityToken.data.txHash,
+      isin_number: equityToken.data.isin_number || null,
+      totalShares: equityToken.data.totalShares,
+    },
+  });
+
+  const bondToken = await callTool({
+    correlationId,
+    agent: AGENTS.STATION_ASSET_ISSUER,
+    toolName: 'createBondToken',
+    args: {
+      ...buildTokenCreateOverridesFromProposal({
+        proposalPayload,
+        stationName,
+        assetType: 'bond',
+      }),
+      stationId,
+      isin_number: bondIsin.data.isin_number || bondIsin.data.isin,
+      stationName,
+      name: `ChargeFrog-${stationName}-Bond`,
+      symbol: bondSymbol,
+      totalBonds: String(bondUnits),
+      pricePerBond: String(pricing.bondPriceHbar),
+      cap: String(cap),
+      metadata: buildAssetMetadataFromProposal({
+        proposalId,
+        stationId,
+        metadataUri: onChainProposal.data.metadataUri,
+        proposalPayload,
+        assetType: 'bond',
+        isinNumber: bondIsin.data.isin_number || bondIsin.data.isin,
+        totalSupply: bondUnits,
+        pricePerUnitHbar: pricing.bondPriceHbar,
+        cap,
+      }),
+      correlationId,
+    },
+  });
+  toolTrace.push({
+    tool: 'createBondToken',
+    arguments: {
+      stationId,
+      isin_number: bondIsin.data.isin_number || bondIsin.data.isin,
+      totalBonds: String(bondUnits),
+    },
+    resultSummary: {
+      tokenAddress: bondToken.data.tokenAddress,
+      txHash: bondToken.data.txHash,
+      isin_number: bondToken.data.isin_number || null,
+      totalBonds: bondToken.data.totalBonds,
+    },
+  });
+
+  const saved = await callTool({
+    correlationId,
+    agent: AGENTS.STATION_ASSET_ISSUER,
+    toolName: 'saveIssuedAssets',
+    args: {
+      proposalId,
+      stationId,
+      cap,
+      shares: equityShares,
+      pricing,
+      metadataUri: onChainProposal.data.metadataUri,
+      equity: {
+        tokenAddress: equityToken.data.tokenAddress,
+        txHash: equityToken.data.txHash,
+        isin: equityIsin.data.isin_number || equityIsin.data.isin,
+        isin_number: equityIsin.data.isin_number || equityIsin.data.isin,
+        supply: equityShares,
+        name: equityToken.data.name || null,
+        symbol: equityToken.data.symbol || null,
+        metadata: equityToken.data.requestPayload?.metadata || null,
+      },
+      bond: {
+        tokenAddress: bondToken.data.tokenAddress,
+        txHash: bondToken.data.txHash,
+        isin: bondIsin.data.isin_number || bondIsin.data.isin,
+        isin_number: bondIsin.data.isin_number || bondIsin.data.isin,
+        supply: bondUnits,
+        name: bondToken.data.name || null,
+        symbol: bondToken.data.symbol || null,
+        metadata: bondToken.data.requestPayload?.metadata || null,
+      },
+      metadata: {
+        assetIssuance: {
+          proposalId,
+          issuedAt: new Date().toISOString(),
+          equityTxHash: equityToken.data.txHash || null,
+          bondTxHash: bondToken.data.txHash || null,
+        },
+      },
+    },
+  });
+  toolTrace.push({
+    tool: 'saveIssuedAssets',
+    arguments: { proposalId, stationId },
+    resultSummary: {
+      stage: saved.data.stage,
+      stationId: saved.data.stationId,
+    },
+  });
+
+  return {
+    status: 'assets_issued',
+    reply:
+      'Station assets issued. Equity and bond tokens are now available for investment stage.',
+    proposalId,
+    stationId,
+    equity: {
+      tokenAddress: equityToken.data.tokenAddress,
+      txHash: equityToken.data.txHash,
+      isin: equityIsin.data.isin_number || equityIsin.data.isin,
+      isin_number: equityIsin.data.isin_number || equityIsin.data.isin,
+      totalSupply: equityShares,
+    },
+    bond: {
+      tokenAddress: bondToken.data.tokenAddress,
+      txHash: bondToken.data.txHash,
+      isin: bondIsin.data.isin_number || bondIsin.data.isin,
+      isin_number: bondIsin.data.isin_number || bondIsin.data.isin,
+      totalSupply: bondUnits,
+    },
+    proposalSupply: {
+      equityShares,
+      bondUnits,
+    },
+    toolTrace,
+  };
+}
+
+// Handles runStationAssetIssuerIfProposalApproved.
+async function runStationAssetIssuerIfProposalApproved({
+  proposalId,
+  correlationId,
+}) {
+  const normalizedProposalId = String(proposalId || '').trim();
+  if (!normalizedProposalId) {
+    throw new Error('proposalId is required');
+  }
+
+  const resolvedCorrelationId = correlationId || crypto.randomUUID();
+  return runStationAssetIssuerAgent({
+    message: `issue assets for proposal ${normalizedProposalId}`,
+    correlationId: resolvedCorrelationId,
+  });
+}
+
+async function runStationAssetIssuerWorker(input = {}) {
+  const proposalId = String(input.proposalId || '').trim();
+  if (proposalId) {
+    return runStationAssetIssuerIfProposalApproved({
+      proposalId,
+      correlationId: input.correlationId,
+    });
+  }
+
+  const message = String(input.message || '').trim();
+  if (!message) {
+    throw new Error('message or proposalId is required');
+  }
+
+  return runStationAssetIssuerAgent({
+    message,
+    correlationId: input.correlationId,
+  });
+}
+
+function extractDeploymentMetadata(station) {
+  const deployment =
+    station?.metadata?.deployment &&
+    typeof station.metadata.deployment === 'object'
+      ? station.metadata.deployment
+      : null;
+  return deployment;
+}
+
+function resolveFoundryProposalId(input = {}) {
+  const direct = String(input.proposalId || '').trim();
+  if (direct) {
+    return direct;
+  }
+  return parseProposalId(input.message);
+}
+
+function summarizePendingAdminStation(station) {
+  if (!station || typeof station !== 'object') {
+    return 'Unknown station';
+  }
+  return [
+    `station ${station.stationId}`,
+    station.stationName ? `(${station.stationName})` : null,
+    station.proposalId ? `proposal ${station.proposalId}` : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function summarizeReviewText(value, maxLength = 220) {
+  const normalized = String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+  return `${normalized.slice(0, maxLength - 3).trimEnd()}...`;
+}
+
+function buildFoundryStationReviewSummary({
+  station,
+  onChainProposal,
+  offChainMetadata,
+}) {
+  const summaryPrefix = summarizePendingAdminStation(station);
+  const proposalPayload = resolveProposalPayload(
+    onChainProposal || {},
+    offChainMetadata || {},
+  );
+  const terms =
+    proposalPayload?.tokenizationInvestmentTerms &&
+    typeof proposalPayload.tokenizationInvestmentTerms === 'object'
+      ? proposalPayload.tokenizationInvestmentTerms
+      : {};
+
+  let proposalSupply = {};
+  try {
+    proposalSupply = resolveSuppliesFromProposalPayload(proposalPayload);
+  } catch (_error) {
+    proposalSupply = {};
+  }
+
+  const pricing =
+    offChainMetadata?.pricing && typeof offChainMetadata.pricing === 'object'
+      ? offChainMetadata.pricing
+      : onChainProposal?.pricing && typeof onChainProposal.pricing === 'object'
+        ? onChainProposal.pricing
+        : station?.pricing && typeof station.pricing === 'object'
+          ? station.pricing
+          : {};
+
+  const investmentTargetHbar = toFiniteNumber(
+    terms.investmentTargetHbarEquivalent,
+  );
+  const equityShares = toPositiveWholeNumber(
+    proposalSupply.equityShares ??
+      terms?.totalSupply?.equityShares ??
+      offChainMetadata?.shares ??
+      onChainProposal?.shares ??
+      station?.shares,
+  );
+  const bondUnits = toPositiveWholeNumber(
+    proposalSupply.bondUnits ?? terms?.totalSupply?.bondUnits,
+  );
+  const hardCap = toPositiveWholeNumber(
+    proposalSupply.hardCap ??
+      terms.hardCap ??
+      offChainMetadata?.cap ??
+      onChainProposal?.cap ??
+      station?.cap,
+  );
+  const equityPriceHbar = toFiniteNumber(
+    pricing.equityPriceHbar ?? terms?.tokenPriceHbar?.equity,
+  );
+  const bondPriceHbar = toFiniteNumber(
+    pricing.bondPriceHbar ?? terms?.tokenPriceHbar?.bond,
+  );
+  const title = summarizeReviewText(onChainProposal?.title, 120);
+  const description = summarizeReviewText(onChainProposal?.description, 180);
+
+  const detailParts = [
+    investmentTargetHbar !== undefined
+      ? `target ${investmentTargetHbar} HBAR`
+      : null,
+    equityShares ? `${equityShares} equity shares` : null,
+    bondUnits ? `${bondUnits} bond units` : null,
+    hardCap ? `hard cap ${hardCap}` : null,
+    equityPriceHbar !== undefined ? `equity ${equityPriceHbar} HBAR` : null,
+    bondPriceHbar !== undefined ? `bond ${bondPriceHbar} HBAR` : null,
+  ].filter(Boolean);
+
+  return [
+    summaryPrefix,
+    title ? `title: ${title}` : null,
+    detailParts.length > 0 ? detailParts.join(', ') : null,
+    description ? `summary: ${description}` : null,
+  ]
+    .filter(Boolean)
+    .join('. ');
+}
+
+async function buildFoundryStationReview({ station, correlationId }) {
+  const stationSummary = summarizePendingAdminStation(station);
+  const proposalId = String(station?.proposalId || '').trim();
+  if (!proposalId) {
+    return {
+      ...station,
+      reviewSummary: stationSummary,
+    };
+  }
+
+  const onChainProposal = await callTool({
+    correlationId,
+    agent: AGENTS.FOUNDRY,
+    toolName: 'readOnChainProposal',
+    args: { proposalId },
+    required: false,
+  });
+  const metadataUri = onChainProposal.ok
+    ? String(onChainProposal.data?.metadataUri || '').trim()
+    : '';
+  const offChainMetadata =
+    metadataUri !== ''
+      ? await callTool({
+          correlationId,
+          agent: AGENTS.FOUNDRY,
+          toolName: 'readOffChainMetadata',
+          args: { metadataUri },
+          required: false,
+        })
+      : { ok: false };
+
+  const reviewSummary = buildFoundryStationReviewSummary({
+    station,
+    onChainProposal: onChainProposal.ok ? onChainProposal.data : null,
+    offChainMetadata: offChainMetadata.ok ? offChainMetadata.data : null,
+  });
+
+  return {
+    ...station,
+    reviewSummary,
+    proposalTitle: onChainProposal.ok ? onChainProposal.data?.title || null : null,
+    proposalDescription: onChainProposal.ok
+      ? summarizeReviewText(onChainProposal.data?.description, 180)
+      : null,
+  };
+}
+
+function pushStationSnapshotTrace({ toolTrace, toolName, args, station }) {
+  if (!Array.isArray(toolTrace) || !station) {
+    return;
+  }
+
+  toolTrace.push({
+    tool: toolName,
+    arguments: args,
+    resultSummary: {
+      stationId: station.stationId || null,
+      stage: station.stage || null,
+      hasDeployment: Boolean(extractDeploymentMetadata(station)),
+      equityTokenAddress: station.equityTokenAddress || null,
+      bondTokenAddress: station.bondTokenAddress || null,
+    },
+  });
+}
+
+async function loadStationSnapshotForProposal({
+  correlationId,
+  agent,
+  proposalId,
+  fallbackStationId,
+  toolTrace,
+}) {
+  const byProposalId = await callTool({
+    correlationId,
+    agent,
+    toolName: 'getStationByProposalId',
+    args: { proposalId },
+    required: false,
+  });
+  if (byProposalId.ok && byProposalId.data) {
+    pushStationSnapshotTrace({
+      toolTrace,
+      toolName: 'getStationByProposalId',
+      args: { proposalId },
+      station: byProposalId.data,
+    });
+    return byProposalId;
+  }
+
+  if (fallbackStationId === undefined || fallbackStationId === null) {
+    return byProposalId;
+  }
+
+  const byStationId = await callTool({
+    correlationId,
+    agent,
+    toolName: 'getStation',
+    args: { stationId: fallbackStationId },
+    required: false,
+  });
+  if (byStationId.ok && byStationId.data) {
+    pushStationSnapshotTrace({
+      toolTrace,
+      toolName: 'getStation',
+      args: { stationId: fallbackStationId },
+      station: byStationId.data,
+    });
+  }
+  return byStationId;
+}
+
+async function listPendingAdminActionStations({ correlationId }) {
+  const listed = await callTool({
+    correlationId,
+    agent: AGENTS.FOUNDRY,
+    toolName: 'listStationsByStage',
+    args: { stage: 'pending-admin-action' },
+  });
+  const stations = Array.isArray(listed.data) ? listed.data : [];
+
+  return stations;
+}
+
+async function runFoundryAttentionQueue({ correlationId }) {
+  const stations = await listPendingAdminActionStations({ correlationId });
+  if (stations.length === 0) {
+    return {
+      status: 'no_pending_admin_action',
+      reply: 'There are no stations pending admin action right now.',
+      stations: [],
+    };
+  }
+
+  const reviewedStations = await Promise.all(
+    stations.map((station) => buildFoundryStationReview({ station, correlationId })),
+  );
+  const stationSummaries = reviewedStations.map(
+    (station) => station.reviewSummary || summarizePendingAdminStation(station),
+  );
+  return {
+    status: 'pending_admin_action_queue',
+    reply:
+      stations.length === 1
+        ? `The station requiring your attention is ${stationSummaries[0]}; ${FOUNDRY_APPROVAL_REPLY}`
+        : `These stations require your attention: ${stationSummaries.join('; ')}; ${FOUNDRY_APPROVAL_REPLY}`,
+    stations: reviewedStations,
+  };
+}
+
+async function resolveFoundryApprovalTarget({ input, correlationId }) {
+  const explicitProposalId = String(input.proposalId || '').trim();
+  if (explicitProposalId) {
+    return {
+      status: 'resolved',
+      proposalId: explicitProposalId,
+    };
+  }
+
+  const message = String(input.message || '').trim();
+  const proposalId = parseProposalId(message);
+  if (proposalId) {
+    return {
+      status: 'resolved',
+      proposalId,
+    };
+  }
+
+  const stationId = parseStationId(message);
+  if (stationId !== undefined) {
+    const station = await callTool({
+      correlationId,
+      agent: AGENTS.FOUNDRY,
+      toolName: 'getStation',
+      args: { stationId },
+      required: false,
+    });
+    if (!station.ok || !station.data) {
+      return {
+        status: 'station_not_found',
+        reply: `I could not find station ${stationId}.`,
+      };
+    }
+    if (
+      String(station.data.stage || '')
+        .trim()
+        .toLowerCase() !== 'pending-admin-action'
+    ) {
+      return {
+        status: 'station_not_pending_admin_action',
+        reply: `Station ${stationId} is not pending admin action.`,
+        station: station.data,
+      };
+    }
+    if (!station.data.proposalId) {
+      return {
+        status: 'proposal_not_found_for_station',
+        reply: `Station ${stationId} does not have a proposalId recorded.`,
+        station: station.data,
+      };
+    }
+    return {
+      status: 'resolved',
+      proposalId: station.data.proposalId,
+      station: station.data,
+    };
+  }
+
+  const pendingStations = await listPendingAdminActionStations({
+    correlationId,
+  });
+  const stationNameHint = parseStationNameHint(message);
+  if (stationNameHint) {
+    const matchedStation = findBestStationByNameHint(
+      pendingStations,
+      stationNameHint,
+    );
+    if (!matchedStation) {
+      return {
+        status: 'station_not_found',
+        reply:
+          'I could not find that station in the pending admin action queue.',
+        stations: pendingStations,
+      };
+    }
+    if (!matchedStation.proposalId) {
+      return {
+        status: 'proposal_not_found_for_station',
+        reply: `Station ${matchedStation.stationId} does not have a proposalId recorded.`,
+        station: matchedStation,
+      };
+    }
+    return {
+      status: 'resolved',
+      proposalId: matchedStation.proposalId,
+      station: matchedStation,
+    };
+  }
+
+  if (pendingStations.length === 0) {
+    return {
+      status: 'no_pending_admin_action',
+      reply: 'There are no stations pending admin action right now.',
+      stations: [],
+    };
+  }
+
+  if (pendingStations.length === 1 && pendingStations[0].proposalId) {
+    return {
+      status: 'resolved',
+      proposalId: pendingStations[0].proposalId,
+      station: pendingStations[0],
+    };
+  }
+
+  return {
+    status: 'approval_target_required',
+    reply:
+      'Multiple stations are pending admin action. Please specify the stationId, proposalId, or full ChargeFrog station name you want to approve.',
+    stations: pendingStations,
+  };
+}
+
+function resolveFoundryDeploymentInput({
+  proposalId,
+  onChainProposal,
+  proposalPayload,
+  stationSnapshot,
+  overrides,
+}) {
+  const normalizedOverrides =
+    overrides && typeof overrides === 'object' ? overrides : {};
+  const terms =
+    proposalPayload?.tokenizationInvestmentTerms &&
+    typeof proposalPayload.tokenizationInvestmentTerms === 'object'
+      ? proposalPayload.tokenizationInvestmentTerms
+      : {};
+  const supply = resolveSuppliesFromProposalPayload(proposalPayload);
+  const stationId = toPositiveWholeNumber(
+    normalizedOverrides.expectedStationId ??
+      normalizedOverrides.stationId ??
+      stationSnapshot?.stationId ??
+      onChainProposal?.stationId ??
+      terms.stationId,
+  );
+  const stationName =
+    String(
+      normalizedOverrides.stationName ||
+        stationSnapshot?.stationName ||
+        terms.stationName ||
+        onChainProposal?.stationName ||
+        '',
+    ).trim() || null;
+  const totalInvestmentHbar =
+    normalizedOverrides.totalInvestmentHbar ??
+    terms.investmentTargetHbarEquivalent ??
+    null;
+  const totalShares =
+    normalizedOverrides.totalShares ?? supply.equityShares ?? null;
+
+  if (!stationId) {
+    throw new Error('proposal stationId is missing; cannot deploy station');
+  }
+  if (!stationName) {
+    throw new Error('proposal stationName is missing; cannot deploy station');
+  }
+  if (totalInvestmentHbar === null || totalInvestmentHbar === undefined) {
+    throw new Error(
+      'proposal investmentTargetHbarEquivalent is missing; cannot deploy station',
+    );
+  }
+  if (totalShares === null || totalShares === undefined) {
+    throw new Error(
+      'proposal totalSupply.equityShares is missing; cannot deploy station',
+    );
+  }
+
+  return {
+    proposalId,
+    expectedStationId: String(stationId),
+    stationId: String(stationId),
+    stationName,
+    projectUrl:
+      normalizedOverrides.projectUrl ||
+      buildDefaultFoundryProjectUrl(stationId),
+    totalInvestment: normalizedOverrides.totalInvestment,
+    totalInvestmentHbar: String(totalInvestmentHbar),
+    totalShares: String(totalShares),
+    stationMetadata:
+      normalizedOverrides.stationMetadata !== undefined
+        ? normalizedOverrides.stationMetadata
+        : {
+            proposalId,
+            stationId: String(stationId),
+            metadataUri: onChainProposal?.metadataUri || null,
+            proposalTxHash: onChainProposal?.txHash || null,
+            onChainProposalId:
+              onChainProposal?.onChain?.onChainProposalId || null,
+          },
+    initialFundAddress: normalizedOverrides.initialFundAddress,
+    registryAddress: normalizedOverrides.registryAddress,
+    boltAddress: normalizedOverrides.boltAddress,
+    rpcUrl: normalizedOverrides.rpcUrl,
+  };
+}
+
+async function runFoundryWorkflow(input = {}) {
+  const proposalId = resolveFoundryProposalId(input);
+  if (!proposalId) {
+    throw new Error(
+      'proposalId is required. Example: {"proposalId":"proposal_123"} or "deploy and issue proposal proposal_123"',
+    );
+  }
+
+  const correlationId = input.correlationId || crypto.randomUUID();
+  const toolTrace = [];
+
+  const onChainProposal = await callTool({
+    correlationId,
+    agent: AGENTS.FOUNDRY,
+    toolName: 'readOnChainProposal',
+    args: { proposalId },
+  });
+  toolTrace.push({
+    tool: 'readOnChainProposal',
+    arguments: { proposalId },
+    resultSummary: {
+      proposalId: onChainProposal.data.proposalId,
+      stationId: onChainProposal.data.stationId,
+      stationName: onChainProposal.data.stationName || null,
+      metadataUri: onChainProposal.data.metadataUri || null,
+    },
+  });
+
+  const offChainMetadata = await callTool({
+    correlationId,
+    agent: AGENTS.FOUNDRY,
+    toolName: 'readOffChainMetadata',
+    args: { metadataUri: onChainProposal.data.metadataUri },
+    required: false,
+  });
+  if (offChainMetadata.ok) {
+    toolTrace.push({
+      tool: 'readOffChainMetadata',
+      arguments: { metadataUri: onChainProposal.data.metadataUri },
+      resultSummary: {
+        stationName: offChainMetadata.data?.stationDetails?.stationName || null,
+        cap: offChainMetadata.data?.cap ?? null,
+        shares: offChainMetadata.data?.shares ?? null,
+      },
+    });
+  }
+
+  const proposalPayload = resolveProposalPayload(
+    onChainProposal.data,
+    offChainMetadata.ok ? offChainMetadata.data : {},
+  );
+  if (!proposalPayload) {
+    throw new Error(
+      'Proposal payload is missing. Cannot deploy station without tokenizationInvestmentTerms.',
+    );
+  }
+
+  const stationSnapshot = await loadStationSnapshotForProposal({
+    correlationId,
+    agent: AGENTS.FOUNDRY,
+    proposalId,
+    fallbackStationId: onChainProposal.data.stationId,
+    toolTrace,
+  });
+
+  let deploymentRecord = extractDeploymentMetadata(stationSnapshot.data);
+  let deployment;
+  const resolvedStationId =
+    stationSnapshot.data?.stationId || onChainProposal.data.stationId || null;
+  if (deploymentRecord?.stationAddress) {
+    deployment = {
+      status: 'already_deployed',
+      reply: `Station ${resolvedStationId} is already deployed. Proceeding to token issuance.`,
+      deployment: deploymentRecord,
+    };
+  } else {
+    const deployInput = resolveFoundryDeploymentInput({
+      proposalId,
+      onChainProposal: onChainProposal.data,
+      proposalPayload,
+      stationSnapshot: stationSnapshot.data,
+      overrides: input,
+    });
+    const deployed = await callTool({
+      correlationId,
+      agent: AGENTS.FOUNDRY,
+      toolName: 'deployStationBundle',
+      args: deployInput,
+    });
+    toolTrace.push({
+      tool: 'deployStationBundle',
+      arguments: {
+        proposalId,
+        expectedStationId: deployInput.expectedStationId,
+        stationName: deployInput.stationName,
+        projectUrl: deployInput.projectUrl,
+      },
+      resultSummary: {
+        stationId: deployed.data?.station?.stationId || null,
+        stationAddress: deployed.data?.contracts?.stationAddress || null,
+        sharesAddress: deployed.data?.contracts?.sharesAddress || null,
+      },
+    });
+
+    const saveDeployment = await callTool({
+      correlationId,
+      agent: AGENTS.FOUNDRY,
+      toolName: 'saveStationDeployment',
+      args: {
+        proposalId,
+        stationId: deployInput.stationId,
+        metadataUri: onChainProposal.data.metadataUri || null,
+        deployment: {
+          network: deployed.data?.network || null,
+          signer: deployed.data?.signer || null,
+          contracts: deployed.data?.contracts || null,
+          station: deployed.data?.station || null,
+          txs: deployed.data?.txs || null,
+        },
+      },
+    });
+    toolTrace.push({
+      tool: 'saveStationDeployment',
+      arguments: {
+        proposalId,
+        stationId: deployInput.stationId,
+      },
+      resultSummary: {
+        stationId: saveDeployment.data?.stationId || null,
+        stage: saveDeployment.data?.stage || null,
+      },
+    });
+
+    deploymentRecord = extractDeploymentMetadata(saveDeployment.data);
+    deployment = {
+      status: 'station_deployed',
+      reply: `Station ${deployInput.stationId} deployed successfully. Triggering station asset issuer.`,
+      deployment: deploymentRecord,
+    };
+  }
+
+  const issuance = await callWorkerAgent({
+    callerAgent: AGENTS.FOUNDRY,
+    endpointPath: PLANNER_WORKER_ENDPOINTS.stationAssetIssuer,
+    action: 'a2a:station_asset_issuer',
+    correlationId,
+    payload: {
+      proposalId,
+      correlationId,
+    },
+  });
+  toolTrace.push({
+    tool: 'a2a:station-asset-issuer',
+    arguments: { proposalId },
+    resultSummary: {
+      status: issuance?.status || null,
+      stationId: issuance?.stationId || null,
+    },
+  });
+
+  const issuanceCompleted =
+    issuance?.status === 'assets_issued' ||
+    issuance?.status === 'already_issued';
+
+  return {
+    status: issuanceCompleted
+      ? 'deployment_and_issuance_complete'
+      : 'deployment_complete_issuance_pending',
+    reply:
+      issuance?.status === 'already_issued'
+        ? 'Station deployment is already recorded and the station asset issuer reports the tokens are already issued.'
+        : issuanceCompleted
+          ? 'Station deployment completed and the station asset issuer created equity and bond tokens.'
+          : `Station deployment completed, but token issuance did not finish cleanly: ${issuance?.reply || 'unknown issuer response'}`,
+    proposalId,
+    stationId:
+      issuance?.stationId ||
+      deploymentRecord?.station?.stationId ||
+      resolvedStationId,
+    deployment,
+    issuance: summarizeIssuance(issuance),
+    toolTrace,
+  };
+}
+
+// Handles summarizeIssuance.
+function summarizeIssuance(issuance = {}) {
+  if (!issuance || typeof issuance !== 'object') {
+    return null;
+  }
+  const equity =
+    issuance?.equity && typeof issuance.equity === 'object'
+      ? {
+          tokenAddress: issuance.equity.tokenAddress || null,
+          txHash: issuance.equity.txHash || null,
+          isin: issuance.equity.isin || issuance.equity.isin_number || null,
+        }
+      : null;
+  const bond =
+    issuance?.bond && typeof issuance.bond === 'object'
+      ? {
+          tokenAddress: issuance.bond.tokenAddress || null,
+          txHash: issuance.bond.txHash || null,
+          isin: issuance.bond.isin || issuance.bond.isin_number || null,
+        }
+      : null;
+  return {
+    status: issuance.status || null,
+    proposalId: issuance.proposalId || null,
+    stationId: toFiniteNumber(issuance.stationId) ?? null,
+    equity,
+    bond,
+  };
+}
+
 // Handles listInvestableStations.
 async function listInvestableStations({ correlationId }) {
   const listed = await callTool({
@@ -1322,6 +2409,15 @@ async function runOrchestrator({ message, walletAddress }) {
           stationCandidate: summarizeStationCandidate(stationFinder),
         };
       }
+    } else if (intent === STATE.ISSUE_ASSETS_AFTER_APPROVAL) {
+      const proposalId = parseProposalId(message);
+      result = {
+        status: 'handoff_to_froggy_foundry',
+        reply: proposalId
+          ? `FroggyPlanner stops after proposal creation. Use POST /api/agent/froggy-foundry with {"proposalId":"${proposalId}"} to deploy the station and then create equity and bond tokens.`
+          : 'FroggyPlanner stops after proposal creation. Use POST /api/agent/froggy-foundry to deploy the station and then create equity and bond tokens.',
+        proposalId: proposalId || null,
+      };
     } else if (intent === STATE.LIST_AVAILABLE_STATIONS) {
       const listed = await listInvestableStations({ correlationId });
       result = {
@@ -1443,7 +2539,7 @@ async function runOrchestrator({ message, walletAddress }) {
         result = {
           status: STATE.GENERAL,
           reply:
-            'I can help with: find station for proposal, list available stations, show choices, buy equity/bond, or get token balance.',
+            'I can help with: find station for proposal, list available stations, show choices, buy equity/bond, or get token balance. Station deployment and token creation are handled by /api/agent/froggy-foundry.',
         };
       }
     }
@@ -1529,11 +2625,116 @@ async function runAgent(input = {}) {
   return runOrchestrator({ message, walletAddress });
 }
 
+// FroggyFoundry
+function parseFoundryIntent(input = {}) {
+  const proposalId = String(input.proposalId || '').trim();
+  if (proposalId) {
+    return 'approve_pending_admin_action';
+  }
+
+  const text = String(input.message || '')
+    .trim()
+    .toLowerCase();
+  if (!text) {
+    return 'general';
+  }
+
+  const asksAttentionQueue =
+    /\b(require|requires|need|needs)\s+my\s+attention\b/.test(text) ||
+    /\bwhat\s+(?:stations?|proposals?)\b/.test(text) ||
+    /\bwhich\s+(?:stations?|proposals?)\b/.test(text) ||
+    /\bpending[-\s]?admin[-\s]action\b/.test(text) ||
+    /\bpending[-\s]?admin\b/.test(text);
+  const asksApproval =
+    /\b(approve|approval|greenlight|green\s*light|go\s+ahead|deploy)\b/.test(
+      text,
+    ) || Boolean(parseProposalId(text));
+
+  if (asksAttentionQueue && !asksApproval) {
+    return 'list_pending_admin_action';
+  }
+  if (asksApproval) {
+    return 'approve_pending_admin_action';
+  }
+  return 'general';
+}
+
+async function runFoundryWorker(input = {}) {
+  return runFoundryAgent(input);
+}
+
+async function runFoundryAgent(input = {}) {
+  const allowedKeys = new Set([
+    'message',
+    'proposalId',
+    'stationName',
+    'projectUrl',
+    'stationMetadata',
+    'totalInvestment',
+    'totalInvestmentHbar',
+    'totalShares',
+    'initialFundAddress',
+    'registryAddress',
+    'boltAddress',
+    'rpcUrl',
+    'expectedStationId',
+    'stationId',
+    'correlationId',
+  ]);
+  const extraKeys = Object.keys(input || {}).filter(
+    (key) => !allowedKeys.has(key),
+  );
+  if (extraKeys.length > 0) {
+    throw new Error(
+      `Unsupported fields for /api/agent/froggy-foundry: ${extraKeys.join(', ')}. Allowed fields: message, proposalId, stationName, projectUrl, stationMetadata, totalInvestment, totalInvestmentHbar, totalShares, initialFundAddress, registryAddress, boltAddress, rpcUrl, expectedStationId, stationId, correlationId`,
+    );
+  }
+
+  const proposalId = String(input.proposalId || '').trim();
+  const message = String(input.message || '').trim();
+
+  if (!proposalId && !message) {
+    throw new Error('message or proposalId is required');
+  }
+
+  const correlationId = input.correlationId || crypto.randomUUID();
+  const intent = parseFoundryIntent(input);
+
+  if (intent === 'list_pending_admin_action') {
+    return runFoundryAttentionQueue({ correlationId });
+  }
+
+  if (intent === 'approve_pending_admin_action') {
+    const resolution = await resolveFoundryApprovalTarget({
+      input,
+      correlationId,
+    });
+    if (resolution.status !== 'resolved') {
+      return resolution;
+    }
+    return runFoundryWorkflow({
+      ...input,
+      proposalId: resolution.proposalId,
+      correlationId,
+    });
+  }
+
+  return {
+    status: 'general',
+    reply:
+      'I can list stations pending admin action, and approve a station proposal for deployment on Hedera testnet plus equity and bond token creation.',
+  };
+}
+
 module.exports = {
   initializeAgent,
   runAgent,
+  runFoundryAgent,
+  runFoundryWorker,
   runStationFinderAgent,
   runInvestmentProposalGeneratorAgent,
+  runStationAssetIssuerAgent,
+  runStationAssetIssuerWorker,
   INTENT,
   TOOL_DEFINITIONS,
   STATE,
@@ -1541,4 +2742,5 @@ module.exports = {
   DECISION_POLICIES,
   PROMPT_VERSION,
   AGENT_PROMPTS,
+  runStationAssetIssuerIfProposalApproved,
 };
