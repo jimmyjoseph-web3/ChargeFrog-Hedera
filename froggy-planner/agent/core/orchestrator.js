@@ -10,7 +10,6 @@ const {
   normalizeReasoningEffort,
 } = require('./shared');
 const {
-  parseLocation,
   parseLatLonFromMessage,
   normalizeAreaForTomTom,
   parseStationId,
@@ -822,6 +821,34 @@ async function runInvestmentProposalGeneratorAgent({
   };
 }
 
+// Handles autoAdvanceProposalToInvestment.
+async function autoAdvanceProposalToInvestment({ proposalId, correlationId }) {
+  const normalizedProposalId = String(proposalId || '').trim();
+  if (!normalizedProposalId) {
+    return {
+      status: 'missing_proposal_id',
+      reply: 'Proposal created but auto-transition failed: missing proposalId.',
+    };
+  }
+
+  const issuance = await runStationAssetIssuerIfProposalApproved({
+    proposalId: normalizedProposalId,
+    correlationId,
+  });
+
+  return {
+    status:
+      issuance?.status === 'assets_issued'
+        ? 'investment_ready'
+        : 'issuance_failed',
+    reply:
+      issuance?.status === 'assets_issued'
+        ? 'Proposal was auto-transitioned to investment stage and station assets were issued.'
+        : issuance?.reply || 'Proposal was created, but asset issuance failed.',
+    issuance,
+  };
+}
+
 // Handles runStationAssetIssuerAgent.
 async function runStationAssetIssuerAgent({ message, correlationId }) {
   const toolTrace = [];
@@ -928,6 +955,7 @@ async function runStationAssetIssuerAgent({ message, correlationId }) {
   }
 
   const proposalSupply = resolveSuppliesFromProposalPayload(proposalPayload);
+
   const stationId = resolvedStationId;
   const stationName = normalizeStationName(
     resolvedStation?.stationName ||
@@ -1207,6 +1235,39 @@ function resolveFoundryProposalId(input = {}) {
     return direct;
   }
   return parseProposalId(input.message);
+}
+
+function parseFoundryIntent(input = {}) {
+  const proposalId = String(input.proposalId || '').trim();
+  if (proposalId) {
+    return 'approve_pending_admin_action';
+  }
+
+  const text = String(input.message || '')
+    .trim()
+    .toLowerCase();
+  if (!text) {
+    return 'general';
+  }
+
+  const asksAttentionQueue =
+    /\b(require|requires|need|needs)\s+my\s+attention\b/.test(text) ||
+    /\bwhat\s+(?:stations?|proposals?)\b/.test(text) ||
+    /\bwhich\s+(?:stations?|proposals?)\b/.test(text) ||
+    /\bpending[-\s]?admin[-\s]action\b/.test(text) ||
+    /\bpending[-\s]?admin\b/.test(text);
+  const asksApproval =
+    /\b(approve|approval|greenlight|green\s*light|go\s+ahead|deploy)\b/.test(
+      text,
+    ) || Boolean(parseProposalId(text));
+
+  if (asksAttentionQueue && !asksApproval) {
+    return 'list_pending_admin_action';
+  }
+  if (asksApproval) {
+    return 'approve_pending_admin_action';
+  }
+  return 'general';
 }
 
 function summarizePendingAdminStation(station) {
@@ -1847,34 +1908,8 @@ async function runFoundryWorkflow(input = {}) {
   };
 }
 
-// Handles summarizeIssuance.
-function summarizeIssuance(issuance = {}) {
-  if (!issuance || typeof issuance !== 'object') {
-    return null;
-  }
-  const equity =
-    issuance?.equity && typeof issuance.equity === 'object'
-      ? {
-          tokenAddress: issuance.equity.tokenAddress || null,
-          txHash: issuance.equity.txHash || null,
-          isin: issuance.equity.isin || issuance.equity.isin_number || null,
-        }
-      : null;
-  const bond =
-    issuance?.bond && typeof issuance.bond === 'object'
-      ? {
-          tokenAddress: issuance.bond.tokenAddress || null,
-          txHash: issuance.bond.txHash || null,
-          isin: issuance.bond.isin || issuance.bond.isin_number || null,
-        }
-      : null;
-  return {
-    status: issuance.status || null,
-    proposalId: issuance.proposalId || null,
-    stationId: toFiniteNumber(issuance.stationId) ?? null,
-    equity,
-    bond,
-  };
+async function runFoundryWorker(input = {}) {
+  return runFoundryAgent(input);
 }
 
 // Handles listInvestableStations.
@@ -2290,6 +2325,36 @@ function summarizeStationCandidate(stationFinder = {}) {
   };
 }
 
+// Handles summarizeIssuance.
+function summarizeIssuance(issuance = {}) {
+  if (!issuance || typeof issuance !== 'object') {
+    return null;
+  }
+  const equity =
+    issuance?.equity && typeof issuance.equity === 'object'
+      ? {
+          tokenAddress: issuance.equity.tokenAddress || null,
+          txHash: issuance.equity.txHash || null,
+          isin: issuance.equity.isin || issuance.equity.isin_number || null,
+        }
+      : null;
+  const bond =
+    issuance?.bond && typeof issuance.bond === 'object'
+      ? {
+          tokenAddress: issuance.bond.tokenAddress || null,
+          txHash: issuance.bond.txHash || null,
+          isin: issuance.bond.isin || issuance.bond.isin_number || null,
+        }
+      : null;
+  return {
+    status: issuance.status || null,
+    proposalId: issuance.proposalId || null,
+    stationId: toFiniteNumber(issuance.stationId) ?? null,
+    equity,
+    bond,
+  };
+}
+
 // Handles runOrchestrator.
 async function runOrchestrator({ message, walletAddress }) {
   const correlationId = crypto.randomUUID();
@@ -2623,44 +2688,6 @@ async function runAgent(input = {}) {
 
   const walletAddress = normalizeWalletAddress(input.walletAddress);
   return runOrchestrator({ message, walletAddress });
-}
-
-// FroggyFoundry
-function parseFoundryIntent(input = {}) {
-  const proposalId = String(input.proposalId || '').trim();
-  if (proposalId) {
-    return 'approve_pending_admin_action';
-  }
-
-  const text = String(input.message || '')
-    .trim()
-    .toLowerCase();
-  if (!text) {
-    return 'general';
-  }
-
-  const asksAttentionQueue =
-    /\b(require|requires|need|needs)\s+my\s+attention\b/.test(text) ||
-    /\bwhat\s+(?:stations?|proposals?)\b/.test(text) ||
-    /\bwhich\s+(?:stations?|proposals?)\b/.test(text) ||
-    /\bpending[-\s]?admin[-\s]action\b/.test(text) ||
-    /\bpending[-\s]?admin\b/.test(text);
-  const asksApproval =
-    /\b(approve|approval|greenlight|green\s*light|go\s+ahead|deploy)\b/.test(
-      text,
-    ) || Boolean(parseProposalId(text));
-
-  if (asksAttentionQueue && !asksApproval) {
-    return 'list_pending_admin_action';
-  }
-  if (asksApproval) {
-    return 'approve_pending_admin_action';
-  }
-  return 'general';
-}
-
-async function runFoundryWorker(input = {}) {
-  return runFoundryAgent(input);
 }
 
 async function runFoundryAgent(input = {}) {
