@@ -125,7 +125,7 @@ function buildTokenCreateOverridesFromProposal({
   proposalPayload,
   stationName,
   assetType,
-} = {}) {
+}) {
   const payload =
     proposalPayload && typeof proposalPayload === 'object'
       ? proposalPayload
@@ -135,53 +135,77 @@ function buildTokenCreateOverridesFromProposal({
     typeof payload.tokenizationInvestmentTerms === 'object'
       ? payload.tokenizationInvestmentTerms
       : {};
-  const normalizedAssetType = String(assetType || '')
-    .trim()
-    .toLowerCase();
-  const lockupMonths = parseLockupPeriodToMonths(terms.lockupPeriod);
-  const transferability =
-    terms.transferability !== undefined ? terms.transferability : undefined;
-  const overrides = {
-    stationName: stationName || terms.stationName || undefined,
+  const governance =
+    payload?.governanceCompliance &&
+    typeof payload.governanceCompliance === 'object'
+      ? payload.governanceCompliance
+      : {};
+
+  const ownerAccount =
+    typeof governance.operatorAddress === 'string' &&
+    governance.operatorAddress.trim() !== ''
+      ? governance.operatorAddress.trim()
+      : String(process.env.ADMIN_ACCOUNT_ID || '0.0.7106098').trim();
+
+  const base = {
+    decimals: 6,
+    isWhiteList: false,
+    isControllable: true,
+    arePartitionsProtected: false,
+    isMultiPartition: false,
+    clearingActive: false,
+    internalKycActivated: false,
+    externalPausesIds: [],
+    externalControlListsIds: [],
+    externalKycListsIds: [],
+    adminAccountId: ownerAccount,
+    diamondOwnerAccount: ownerAccount,
+    regulationType: 1,
+    regulationSubType: 0,
+    currency: 'USD',
+    currencyHex: '0x555344',
+    erc20VotesActivated: false,
   };
 
-  if (lockupMonths !== null) {
-    overrides.lockupPeriodInMonths = lockupMonths;
-  }
-  if (transferability !== undefined) {
-    overrides.transferability = transferability;
-  }
-
-  if (normalizedAssetType === 'equity') {
-    const revenueSharePercent = toFiniteNumber(terms.revenueSharePercent);
-    if (revenueSharePercent !== undefined) {
-      overrides.revenueSharePercent = revenueSharePercent;
-    }
-    return overrides;
-  }
-
-  if (normalizedAssetType === 'bond') {
-    const couponRate = toFiniteNumber(
-      terms.couponRate ??
-        terms.couponRatePercent ??
-        terms.bondCouponRate ??
-        terms.interestRate,
-    );
-    if (couponRate !== undefined) {
-      overrides.couponRate = couponRate;
-    }
-    if (terms.startingDate !== undefined) {
-      overrides.startingDate = terms.startingDate;
-    }
-    if (terms.maturityDate !== undefined) {
-      overrides.maturityDate = terms.maturityDate;
-    }
-    if (terms.redemptionModel !== undefined) {
-      overrides.redemptionModel = terms.redemptionModel;
-    }
+  if (assetType === 'equity') {
+    return {
+      ...base,
+      isCountryControlListWhiteList: false,
+      countries: '',
+      configId:
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+      configVersion: 0,
+      votingRight: false,
+      informationRight: true,
+      liquidationRight: false,
+      subscriptionRight: false,
+      conversionRight: false,
+      redemptionRight: false,
+      putRight: false,
+      dividendRight: 0,
+      info: `ChargeFrog-${stationName} equity token for The ChargeFrog project - testnet`,
+    };
   }
 
-  return overrides;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const startingDate = nowSeconds + 3600;
+  const lockupMonths = parseLockupPeriodToMonths(terms.lockupPeriod);
+  const maturityDate = lockupMonths
+    ? Math.trunc(startingDate + lockupMonths * 30 * 24 * 60 * 60)
+    : Math.trunc(startingDate + 365 * 24 * 60 * 60);
+
+  return {
+    ...base,
+    isCountryControlListWhiteList: true,
+    countries: 'US',
+    configId:
+      '0x0000000000000000000000000000000000000000000000000000000000000002',
+    configVersion: 1,
+    nominalValue: '1',
+    startingDate,
+    maturityDate,
+    info: `ChargeFrog-${stationName} bond token for The ChargeFrog project - testnet`,
+  };
 }
 
 module.exports = {
