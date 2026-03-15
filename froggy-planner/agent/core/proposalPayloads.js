@@ -121,6 +121,68 @@ function parseLockupPeriodToMonths(lockupPeriod) {
   return Math.trunc(months);
 }
 
+function buildTokenCreateOverridesFromProposal({
+  proposalPayload,
+  stationName,
+  assetType,
+} = {}) {
+  const payload =
+    proposalPayload && typeof proposalPayload === 'object'
+      ? proposalPayload
+      : {};
+  const terms =
+    payload?.tokenizationInvestmentTerms &&
+    typeof payload.tokenizationInvestmentTerms === 'object'
+      ? payload.tokenizationInvestmentTerms
+      : {};
+  const normalizedAssetType = String(assetType || '')
+    .trim()
+    .toLowerCase();
+  const lockupMonths = parseLockupPeriodToMonths(terms.lockupPeriod);
+  const transferability =
+    terms.transferability !== undefined ? terms.transferability : undefined;
+  const overrides = {
+    stationName: stationName || terms.stationName || undefined,
+  };
+
+  if (lockupMonths !== null) {
+    overrides.lockupPeriodInMonths = lockupMonths;
+  }
+  if (transferability !== undefined) {
+    overrides.transferability = transferability;
+  }
+
+  if (normalizedAssetType === 'equity') {
+    const revenueSharePercent = toFiniteNumber(terms.revenueSharePercent);
+    if (revenueSharePercent !== undefined) {
+      overrides.revenueSharePercent = revenueSharePercent;
+    }
+    return overrides;
+  }
+
+  if (normalizedAssetType === 'bond') {
+    const couponRate = toFiniteNumber(
+      terms.couponRate ??
+        terms.couponRatePercent ??
+        terms.bondCouponRate ??
+        terms.interestRate,
+    );
+    if (couponRate !== undefined) {
+      overrides.couponRate = couponRate;
+    }
+    if (terms.startingDate !== undefined) {
+      overrides.startingDate = terms.startingDate;
+    }
+    if (terms.maturityDate !== undefined) {
+      overrides.maturityDate = terms.maturityDate;
+    }
+    if (terms.redemptionModel !== undefined) {
+      overrides.redemptionModel = terms.redemptionModel;
+    }
+  }
+
+  return overrides;
+}
 
 module.exports = {
   resolveProposalPayload,
