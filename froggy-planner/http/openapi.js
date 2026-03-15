@@ -387,6 +387,88 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
+            '/api/discovery/charging-stations': {
+        post: {
+          tags: ['Discovery'],
+          summary:
+            'Step 2: Get EV charging availability using chargingAvailabilityId(s) from /api/discovery/poi',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/DiscoveryChargingAvailabilityRequest',
+                },
+                examples: {
+                  singleId: {
+                    summary: 'Single chargingAvailabilityId',
+                    value: {
+                      chargingAvailabilityId: 'XXX*YYY*ZZZ',
+                    },
+                  },
+                  batchIds: {
+                    summary: 'Batch chargingAvailabilityIds',
+                    value: {
+                      chargingAvailabilityIds: ['XXX*YYY*ZZZ', 'AAA*BBB*CCC'],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Charging station results',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/ev/chargingAvailability': {
+        get: {
+          tags: ['Discovery'],
+          summary:
+            'GET alias: charging availability lookup by chargingAvailabilityId or comma-separated chargingAvailabilityIds',
+          parameters: [
+            {
+              in: 'query',
+              name: 'chargingAvailabilityId',
+              schema: { type: 'string' },
+            },
+            { in: 'query', name: 'id', schema: { type: 'string' } },
+            {
+              in: 'query',
+              name: 'chargingAvailabilityIds',
+              schema: { type: 'string' },
+              description: 'Comma-separated ids',
+            },
+            {
+              in: 'query',
+              name: 'ids',
+              schema: { type: 'string' },
+              description: 'Comma-separated ids',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Charging station results',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
     },
     components: {
       responses: {

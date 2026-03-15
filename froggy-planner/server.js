@@ -324,6 +324,56 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+    if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/discovery/charging-stations'
+  ) {
+    return handleApiRequest(req, res, findChargingStationsByAvailability);
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'GET' &&
+    pathname === '/api/ev/chargingAvailability'
+  ) {
+    try {
+      const single =
+        queryParamOrUndefined(
+          requestUrl.searchParams,
+          'chargingAvailabilityId',
+        ) || queryParamOrUndefined(requestUrl.searchParams, 'id');
+      const manyRaw =
+        queryParamOrUndefined(
+          requestUrl.searchParams,
+          'chargingAvailabilityIds',
+        ) || queryParamOrUndefined(requestUrl.searchParams, 'ids');
+
+      const chargingAvailabilityIds = manyRaw
+        ? manyRaw
+            .split(',')
+            .map((item) => String(item).trim())
+            .filter((item) => item !== '')
+        : undefined;
+
+      const input = {
+        chargingAvailabilityId: single,
+        chargingAvailabilityIds,
+      };
+      const data = await findChargingStationsByAvailability(input);
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
+
+
+
   return sendJson(res, 404, { ok: false, error: 'Route not found' });
 });
 
