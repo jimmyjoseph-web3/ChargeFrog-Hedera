@@ -6,6 +6,17 @@ const {
   TopicId,
 } = require('@hashgraph/sdk');
 const {
+  createBond,
+  createToken,
+  ensureConnected,
+  getBalance,
+  issue,
+  mint,
+} = require('../../clients/atsClient');
+const {
+  deployStationBundle: deployStationBundleClient,
+} = require('../../clients/stationContractsClient');
+const {
   normalizePrivateKey,
 } = require('../../clients/privateKeyEthereumProvider');
 const {
@@ -19,6 +30,21 @@ const {
   createMiniNode,
   countMiniNodesInNeighborhood,
 } = require('../../store/miniNodeStore');
+const {
+  appendAuditLog,
+  createInvestmentProposalRecord,
+  findStationByLocation: findStationByLocationRecord,
+  getProposalRecord,
+  getStationById,
+  getStationByProposalId: getStationByProposalIdRecord,
+  listAllStations: listAllStationsRecord,
+  listAvailableStations,
+  listStationsByStage: listStationsByStageRecord,
+  readMetadataByUri,
+  saveStationDeployment: saveStationDeploymentRecord,
+  saveIssuedAssets,
+  updateProposalOnChainRecord,
+} = require('../../store/stationStore');
 const path = require('path');
 const {
   buildIpfsProposalPayload,
@@ -31,6 +57,8 @@ const WEB_SEARCH_SYSTEM_PROMPT = loadMarkdownPrompt(
 );
 
 const MILES_TO_METERS = 1609.344;
+const COUNTRY_CODE = 'MY';
+const ISIN_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const HCS_MESSAGE_MAX_BYTES = 6000;
 const DEFAULT_CONFIG_ID =
   '0x0000000000000000000000000000000000000000000000000000000000000001';
@@ -184,6 +212,13 @@ function computeCheckDigit(digitStr) {
   return (10 - (sum % 10)) % 10;
 }
 
+// Handles buildIsin.
+function buildIsin() {
+  const id9 = randomId9();
+  const digits = toDigitsForCheck(id9);
+  const check = computeCheckDigit(digits);
+  return `${COUNTRY_CODE}${id9}${check}`;
+}
 
 // Handles envValue.
 function envValue(...keys) {
@@ -273,6 +308,16 @@ function getOpenAiWebSearchConfig() {
   };
 }
 
+// Handles normalizeCurrencyHex.
+function normalizeCurrencyHex(value) {
+  const raw = String(value || 'USD').trim();
+  if (/^0x[0-9a-fA-F]+$/.test(raw)) {
+    return raw.toLowerCase();
+  }
+  const normalized = raw.toUpperCase();
+  return `0x${Buffer.from(normalized, 'ascii').toString('hex')}`;
+}
+
 // Handles sanitizeStationName.
 function sanitizeStationName(value, fallback) {
   const normalized = String(value || '')
@@ -287,6 +332,19 @@ function sanitizeStationName(value, fallback) {
   return fb ? fb.replace(/\s+/g, ' ') : 'station';
 }
 
+// Handles normalizeTokenSymbol.
+function normalizeTokenSymbol(value, fallback) {
+  const cleaned = String(value || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+  const resolved =
+    cleaned ||
+    String(fallback || 'CF')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+  const sliced = resolved.slice(0, 10);
+  return sliced || 'CF';
+}
 
 // Handles deepCloneJson.
 function deepCloneJson(value) {
@@ -689,6 +747,149 @@ async function publishViaHcsTopic({ input, metadataHash }) {
   }
 }
 
+// Handles parsePricing.
+function parsePricing(pricing) {
+  const source = pricing && typeof pricing === 'object' ? pricing : {};
+  const equityPriceHbar = toFiniteNumber(source.equityPriceHbar);
+  const bondPriceHbar = toFiniteNumber(source.bondPriceHbar);
+  return {
+    equityPriceHbar:
+      equityPriceHbar !== undefined && equityPriceHbar > 0
+        ? equityPriceHbar
+        : 1,
+    bondPriceHbar:
+      bondPriceHbar !== undefined && bondPriceHbar > 0 ? bondPriceHbar : 1,
+  };
+}
+
+// Handles resolveHederaTargetAccountId.
+function resolveHederaTargetAccountId(buyerWallet) {
+  const raw = String(buyerWallet || '').trim();
+  if (!raw) {
+    throw new Error('buyerWallet is required');
+  }
+
+  if (/^\d+\.\d+\.\d+$/.test(raw)) {
+    return {
+      targetId: raw,
+      targetSource: 'buyerWallet',
+    };
+  }
+
+  throw new Error('buyerWallet must be a valid Hedera account ID (0.0.x)');
+}
+
+// Handles isSecurityIdFormat.
+function isSecurityIdFormat(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return false;
+  return /^\d+\.\d+\.\d+$/.test(raw) || /^0x[a-fA-F0-9]{40}$/.test(raw);
+}
+
+// Handles extractSecurityIdCandidate.
+function extractSecurityIdCandidate(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const raw = String(value).trim();
+    return isSecurityIdFormat(raw) ? raw : null;
+  }
+  if (typeof value !== 'object') return null;
+
+  const keys = [
+    'value',
+    'securityId',
+    'tokenAddress',
+    'diamondAddress',
+    'evmDiamondAddress',
+    'id',
+    'address',
+  ];
+  for (const key of keys) {
+    if (!(key in value)) continue;
+    const nested = extractSecurityIdCandidate(value[key]);
+    if (nested) return nested;
+  }
+  return null;
+}
+
+// Handles resolveStationTokenAddress.
+function resolveStationTokenAddress(station, assetType) {
+  const issuedAssets = station?.metadata?.issuedAssets;
+  const proposalAssets = station?.metadata?.proposal?.assets || station?.assets;
+
+  const candidates =
+    assetType === 'equity'
+      ? [
+          station?.equityTokenAddress,
+          issuedAssets?.equity?.tokenAddress,
+          issuedAssets?.equity?.securityId,
+          issuedAssets?.equity?.diamondAddress,
+          proposalAssets?.equity?.tokenAddress,
+          proposalAssets?.equity?.securityId,
+          station?.metadata?.equityTokenAddress,
+        ]
+      : [
+          station?.bondTokenAddress,
+          issuedAssets?.bond?.tokenAddress,
+          issuedAssets?.bond?.securityId,
+          issuedAssets?.bond?.diamondAddress,
+          proposalAssets?.bond?.tokenAddress,
+          proposalAssets?.bond?.securityId,
+          station?.metadata?.bondTokenAddress,
+        ];
+
+  for (const candidate of candidates) {
+    const resolved = extractSecurityIdCandidate(candidate);
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
+// Handles normalizeBalanceValue.
+function normalizeBalanceValue(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
+  }
+  if (typeof value !== 'object') return null;
+
+  const keys = ['value', 'amount', 'balance'];
+  for (const key of keys) {
+    if (!(key in value)) continue;
+    const nested = normalizeBalanceValue(value[key]);
+    if (nested !== null) return nested;
+  }
+  return null;
+}
+
+// Handles resolveSecurityIdForAssetOperation.
+async function resolveSecurityIdForAssetOperation({
+  stationId,
+  assetType,
+  explicitSecurityId,
+}) {
+  const direct = extractSecurityIdCandidate(explicitSecurityId);
+  if (direct) {
+    return {
+      securityId: direct,
+      source: 'request_payload',
+    };
+  }
+
+  const station = await getStationById(stationId);
+  const fromStation = resolveStationTokenAddress(station, assetType);
+  if (!fromStation) {
+    throw new Error(
+      `${assetType} token address is missing for station ${stationId}. Expected ${assetType}TokenAddress in Mongo station record.`,
+    );
+  }
+  return {
+    securityId: fromStation,
+    source: 'mongodb_station_record',
+    station,
+  };
+}
+
 const agentTools = {
   // Handles webSearch.
   async webSearch(input = {}) {
@@ -1032,6 +1233,623 @@ const agentTools = {
       topicMessageStatus,
       proposalPayload: proposal.metadata?.proposalPayload || null,
     };
+  },
+
+  // Handles readOffChainMetadata.
+  async readOffChainMetadata(input = {}) {
+    return withRetry(() => readMetadataByUri(input.metadataUri), {
+      retries: 1,
+      baseDelayMs: 250,
+    });
+  },
+
+  // Handles generateISIN.
+  async generateISIN(input = {}) {
+    void input;
+    const isin = buildIsin();
+    return {
+      isin,
+      isin_number: isin,
+    };
+  },
+
+  // Handles deployStationBundle.
+  async deployStationBundle(input = {}) {
+    return deployStationBundleClient(input);
+  },
+
+  // Handles createEquityToken.
+  async createEquityToken(input = {}) {
+    const stationId = toPositiveInt(input.stationId, undefined, 'stationId');
+    const isinNumber = String(input.isin_number || input.isin || '').trim();
+    if (!isinNumber) {
+      throw new Error(
+        'isin_number (or isin) is required for createEquityToken',
+      );
+    }
+    const totalShares = String(
+      input.totalShares || input.numberOfShares || input.shares || '1000',
+    );
+    const cap = input.cap ?? null;
+    const pricePerShare = String(input.pricePerShare || '1');
+    const stationName = sanitizeStationName(
+      input.stationName || input.metadata?.stationName || input.name,
+      `station-${stationId}`,
+    );
+    const networkLabel = envValue('HEDERA_NETWORK') || 'testnet';
+    const adminAccountId = String(
+      input.adminAccountId || envValue('ADMIN_ACCOUNT_ID') || '',
+    );
+    const currencyHex = normalizeCurrencyHex(
+      input.currencyHex || input.currency || 'USD',
+    );
+    const requestPayload = {
+      name: String(input.name || `ChargeFrog-${stationName}`),
+      symbol: normalizeTokenSymbol(input.symbol, `CF${stationId}EQ`),
+      isin: isinNumber,
+      decimals: Number(input.decimals ?? 6),
+
+      isWhiteList: Boolean(input.isWhiteList ?? false),
+      isControllable: Boolean(input.isControllable ?? true),
+      arePartitionsProtected: Boolean(input.arePartitionsProtected ?? false),
+      isMultiPartition: Boolean(input.isMultiPartition ?? false),
+      clearingActive: Boolean(input.clearingActive ?? false),
+      internalKycActivated: Boolean(input.internalKycActivated ?? false),
+
+      externalPausesIds: Array.isArray(input.externalPausesIds)
+        ? input.externalPausesIds
+        : [],
+      externalControlListsIds: Array.isArray(input.externalControlListsIds)
+        ? input.externalControlListsIds
+        : [],
+      externalKycListsIds: Array.isArray(input.externalKycListsIds)
+        ? input.externalKycListsIds
+        : [],
+
+      diamondOwnerAccount: String(input.diamondOwnerAccount || adminAccountId),
+
+      votingRight: Boolean(input.votingRight ?? false),
+      informationRight: Boolean(input.informationRight ?? true),
+      liquidationRight: Boolean(input.liquidationRight ?? false),
+      subscriptionRight: Boolean(input.subscriptionRight ?? false),
+      conversionRight: Boolean(input.conversionRight ?? false),
+      redemptionRight: Boolean(input.redemptionRight ?? false),
+      putRight: Boolean(input.putRight ?? false),
+      dividendRight: Number(input.dividendRight ?? 0),
+
+      currency: String(input.currency || 'USD'),
+      currencyHex,
+      numberOfShares: totalShares,
+      nominalValue: pricePerShare,
+
+      regulationType: Number(input.regulationType ?? 1),
+      regulationSubType: Number(input.regulationSubType ?? 0),
+      isCountryControlListWhiteList: Boolean(
+        input.isCountryControlListWhiteList ?? false,
+      ),
+      countries: String(input.countries ?? ''),
+
+      info: String(
+        input.info ||
+          `ChargeFrog-${stationName} equity token for The ChargeFrog project - ${networkLabel}`,
+      ),
+
+      configId: String(input.configId || DEFAULT_CONFIG_ID),
+      configVersion: Number(input.configVersion ?? 0),
+      erc20VotesActivated: Boolean(input.erc20VotesActivated ?? false),
+      adminAccountId,
+      maxSupply: String(cap || totalShares),
+      metadata: input.metadata,
+    };
+
+    const response = await createToken(requestPayload);
+
+    const tokenAddress =
+      extractSecurityIdCandidate(response?.security?.diamondAddress) ||
+      extractSecurityIdCandidate(response?.security?.evmDiamondAddress) ||
+      extractSecurityIdCandidate(response?.security) ||
+      null;
+    const txHash = extractFirstTransactionId(response);
+
+    await appendAuditLog({
+      correlationId: input.correlationId || null,
+      action: 'createEquityToken',
+      status: tokenAddress ? 'ok' : 'error',
+      stationId,
+      txHash,
+      details: {
+        stationId,
+        tokenAddress,
+        isin_number: isinNumber,
+        totalShares,
+        symbol: requestPayload.symbol,
+        name: requestPayload.name,
+      },
+    });
+
+    return {
+      tokenAddress,
+      txHash,
+      isin: isinNumber,
+      isin_number: isinNumber,
+      name: requestPayload.name,
+      symbol: requestPayload.symbol,
+      totalShares,
+      cap: cap ?? totalShares,
+      pricePerShare,
+      requestPayload,
+    };
+  },
+
+  // Handles createBondToken.
+  async createBondToken(input = {}) {
+    const stationId = toPositiveInt(input.stationId, undefined, 'stationId');
+    const isinNumber = String(input.isin_number || input.isin || '').trim();
+    if (!isinNumber) {
+      throw new Error('isin_number (or isin) is required for createBondToken');
+    }
+    const totalBonds = String(input.totalBonds || input.shares || '1000');
+    const cap = input.cap ?? null;
+    const pricePerBond = String(input.pricePerBond || '1');
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    let startingDate = toUnixTimestampSeconds(
+      input.startingDate,
+      nowSeconds + 3600,
+    );
+    const minSafeStartingDate = nowSeconds + 300;
+    if (startingDate <= minSafeStartingDate) {
+      startingDate = nowSeconds + 3600;
+    }
+    let maturityDate = toUnixTimestampSeconds(
+      input.maturityDate,
+      startingDate + 365 * 24 * 60 * 60,
+    );
+    if (maturityDate <= startingDate) {
+      maturityDate = startingDate + 365 * 24 * 60 * 60;
+    }
+    const stationName = sanitizeStationName(
+      input.stationName || input.metadata?.stationName || input.name,
+      `station-${stationId}`,
+    );
+    const networkLabel = envValue('HEDERA_NETWORK') || 'testnet';
+    const defaultAdminAccountId = String(
+      envValue('ADMIN_ACCOUNT_ID') || '0.0.7106098',
+    );
+    const adminAccountId = String(
+      input.adminAccountId || defaultAdminAccountId,
+    );
+    const nominalValue = String(input.nominalValue || '1');
+    const currency = String(input.currency || 'USD');
+    const currencyHex = normalizeCurrencyHex(input.currencyHex || currency);
+    const requestPayload = {
+      name: String(input.name || `ChargeFrog-${stationName}-Bond`),
+      symbol: normalizeTokenSymbol(input.symbol, `CF${stationId}BD`),
+      isin: isinNumber,
+      decimals: Number(input.decimals ?? 6),
+      currency,
+      currencyHex,
+      numberOfUnits: totalBonds,
+      nominalValue,
+      startingDate,
+      maturityDate,
+      adminAccountId,
+      diamondOwnerAccount: String(input.diamondOwnerAccount || adminAccountId),
+      isWhiteList: Boolean(input.isWhiteList ?? false),
+      isControllable: Boolean(input.isControllable ?? true),
+      arePartitionsProtected: Boolean(input.arePartitionsProtected ?? false),
+      isMultiPartition: Boolean(input.isMultiPartition ?? false),
+      clearingActive: Boolean(input.clearingActive ?? false),
+      internalKycActivated: Boolean(input.internalKycActivated ?? false),
+      regulationType: Number(input.regulationType ?? 1),
+      regulationSubType: Number(input.regulationSubType ?? 0),
+      isCountryControlListWhiteList: Boolean(
+        input.isCountryControlListWhiteList ?? true,
+      ),
+      countries: String(input.countries ?? 'US'),
+      erc20VotesActivated: Boolean(input.erc20VotesActivated ?? false),
+
+      info: String(
+        input.info ||
+          `ChargeFrog-${stationName} bond token for The ChargeFrog project - ${networkLabel}`,
+      ),
+      configId: String(
+        input.configId ||
+          '0x0000000000000000000000000000000000000000000000000000000000000002',
+      ),
+      configVersion: Number(input.configVersion ?? 1),
+      maxSupply: String(cap || totalBonds),
+      metadata: input.metadata,
+    };
+
+    const response = await createBond(requestPayload);
+
+    const tokenAddress =
+      extractSecurityIdCandidate(response?.security?.diamondAddress) ||
+      extractSecurityIdCandidate(response?.security?.evmDiamondAddress) ||
+      extractSecurityIdCandidate(response?.security) ||
+      null;
+    const txHash = extractFirstTransactionId(response);
+
+    await appendAuditLog({
+      correlationId: input.correlationId || null,
+      action: 'createBondToken',
+      status: tokenAddress ? 'ok' : 'error',
+      stationId,
+      txHash,
+      details: {
+        stationId,
+        tokenAddress,
+        isin_number: isinNumber,
+        totalBonds,
+        symbol: requestPayload.symbol,
+        name: requestPayload.name,
+      },
+    });
+
+    return {
+      tokenAddress,
+      txHash,
+      isin: isinNumber,
+      isin_number: isinNumber,
+      name: requestPayload.name,
+      symbol: requestPayload.symbol,
+      totalBonds,
+      cap: cap ?? totalBonds,
+      pricePerBond,
+      requestPayload,
+    };
+  },
+
+  // Handles mintEquity.
+  async mintEquity(input = {}) {
+    const stationId = toPositiveInt(input.stationId, undefined, 'stationId');
+    const amount = String(input.amount || '');
+    if (!amount) {
+      throw new Error('amount is required');
+    }
+
+    const target = resolveHederaTargetAccountId(input.buyerWallet);
+    const securityResolution = await resolveSecurityIdForAssetOperation({
+      stationId,
+      assetType: 'equity',
+      explicitSecurityId: input.tokenAddress || input.securityId,
+    });
+    const securityId = securityResolution.securityId;
+
+    const response = await mint({
+      securityId,
+      targetId: target.targetId,
+      amount,
+    });
+
+    await appendAuditLog({
+      correlationId: input.correlationId || null,
+      action: 'mintEquity',
+      status: 'ok',
+      stationId,
+      txHash: response.transactionId || null,
+      details: {
+        securityId,
+        amount,
+        buyerWallet: input.buyerWallet,
+        targetId: target.targetId,
+        targetSource: target.targetSource,
+        securityIdSource: securityResolution.source,
+      },
+    });
+
+    return {
+      txHash: response.transactionId || null,
+      securityId,
+      amount,
+      buyerWallet: input.buyerWallet,
+      targetId: target.targetId,
+      targetSource: target.targetSource,
+      securityIdSource: securityResolution.source,
+    };
+  },
+
+  // Handles mintBond.
+  async mintBond(input = {}) {
+    const stationId = toPositiveInt(input.stationId, undefined, 'stationId');
+    const amount = String(input.amount || '');
+    if (!amount) {
+      throw new Error('amount is required');
+    }
+
+    const target = resolveHederaTargetAccountId(input.buyerWallet);
+    const securityResolution = await resolveSecurityIdForAssetOperation({
+      stationId,
+      assetType: 'bond',
+      explicitSecurityId: input.tokenAddress || input.securityId,
+    });
+    const securityId = securityResolution.securityId;
+
+    const response = await mint({
+      securityId,
+      targetId: target.targetId,
+      amount,
+    });
+
+    await appendAuditLog({
+      correlationId: input.correlationId || null,
+      action: 'mintBond',
+      status: 'ok',
+      stationId,
+      txHash: response.transactionId || null,
+      details: {
+        securityId,
+        amount,
+        buyerWallet: input.buyerWallet,
+        targetId: target.targetId,
+        targetSource: target.targetSource,
+        securityIdSource: securityResolution.source,
+      },
+    });
+
+    return {
+      txHash: response.transactionId || null,
+      securityId,
+      amount,
+      buyerWallet: input.buyerWallet,
+      targetId: target.targetId,
+      targetSource: target.targetSource,
+      securityIdSource: securityResolution.source,
+    };
+  },
+
+  // Handles issueEquity.
+  async issueEquity(input = {}) {
+    const stationId = toPositiveInt(input.stationId, undefined, 'stationId');
+    const amount = String(input.amount || '');
+    if (!amount) {
+      throw new Error('amount is required');
+    }
+
+    const target = resolveHederaTargetAccountId(input.buyerWallet);
+    const securityResolution = await resolveSecurityIdForAssetOperation({
+      stationId,
+      assetType: 'equity',
+      explicitSecurityId: input.tokenAddress || input.securityId,
+    });
+    const securityId = securityResolution.securityId;
+
+    const response = await issue({
+      securityId,
+      targetId: target.targetId,
+      amount,
+    });
+
+    await appendAuditLog({
+      correlationId: input.correlationId || null,
+      action: 'issueEquity',
+      status: 'ok',
+      stationId,
+      txHash: response.transactionId || null,
+      details: {
+        securityId,
+        amount,
+        buyerWallet: input.buyerWallet,
+        targetId: target.targetId,
+        targetSource: target.targetSource,
+        securityIdSource: securityResolution.source,
+      },
+    });
+
+    return {
+      txHash: response.transactionId || null,
+      securityId,
+      amount,
+      buyerWallet: input.buyerWallet,
+      targetId: target.targetId,
+      targetSource: target.targetSource,
+      securityIdSource: securityResolution.source,
+    };
+  },
+
+  // Handles issueBond.
+  async issueBond(input = {}) {
+    const stationId = toPositiveInt(input.stationId, undefined, 'stationId');
+    const amount = String(input.amount || '');
+    if (!amount) {
+      throw new Error('amount is required');
+    }
+
+    const target = resolveHederaTargetAccountId(input.buyerWallet);
+    const securityResolution = await resolveSecurityIdForAssetOperation({
+      stationId,
+      assetType: 'bond',
+      explicitSecurityId: input.tokenAddress || input.securityId,
+    });
+    const securityId = securityResolution.securityId;
+
+    const response = await issue({
+      securityId,
+      targetId: target.targetId,
+      amount,
+    });
+
+    await appendAuditLog({
+      correlationId: input.correlationId || null,
+      action: 'issueBond',
+      status: 'ok',
+      stationId,
+      txHash: response.transactionId || null,
+      details: {
+        securityId,
+        amount,
+        buyerWallet: input.buyerWallet,
+        targetId: target.targetId,
+        targetSource: target.targetSource,
+        securityIdSource: securityResolution.source,
+      },
+    });
+
+    return {
+      txHash: response.transactionId || null,
+      securityId,
+      amount,
+      buyerWallet: input.buyerWallet,
+      targetId: target.targetId,
+      targetSource: target.targetSource,
+      securityIdSource: securityResolution.source,
+    };
+  },
+
+  // Handles getTokenBalance.
+  async getTokenBalance(input = {}) {
+    const stationId = toPositiveInt(input.stationId, undefined, 'stationId');
+    const rawAssetType = String(input.assetType || '')
+      .trim()
+      .toLowerCase();
+    if (rawAssetType !== 'equity' && rawAssetType !== 'bond') {
+      throw new Error('assetType must be either "equity" or "bond"');
+    }
+
+    const target = resolveHederaTargetAccountId(
+      input.walletAddress || input.buyerWallet || input.targetId,
+    );
+    const securityResolution = await resolveSecurityIdForAssetOperation({
+      stationId,
+      assetType: rawAssetType,
+      explicitSecurityId: input.tokenAddress || input.securityId,
+    });
+
+    const response = await getBalance({
+      securityId: securityResolution.securityId,
+      targetId: target.targetId,
+    });
+    const normalizedBalance = normalizeBalanceValue(response.balance);
+
+    await appendAuditLog({
+      correlationId: input.correlationId || null,
+      action: 'getTokenBalance',
+      status: 'ok',
+      stationId,
+      txHash: null,
+      details: {
+        stationId,
+        assetType: rawAssetType,
+        securityId: securityResolution.securityId,
+        securityIdSource: securityResolution.source,
+        walletAddress: input.walletAddress || input.buyerWallet || null,
+        targetId: target.targetId,
+        targetSource: target.targetSource,
+      },
+    });
+
+    return {
+      stationId,
+      assetType: rawAssetType,
+      securityId: securityResolution.securityId,
+      securityIdSource: securityResolution.source,
+      walletAddress: input.walletAddress || input.buyerWallet || null,
+      targetId: target.targetId,
+      targetSource: target.targetSource,
+      balance: normalizedBalance,
+      balanceRaw: response.balance ?? null,
+    };
+  },
+
+  // Handles listStationsAvailable.
+  async listStationsAvailable() {
+    return withRetry(() => listAvailableStations(), {
+      retries: 1,
+      baseDelayMs: 250,
+    });
+  },
+
+  // Handles listAllStations.
+  async listAllStations() {
+    return withRetry(() => listAllStationsRecord(), {
+      retries: 1,
+      baseDelayMs: 250,
+    });
+  },
+
+  // Handles listStationsByStage.
+  async listStationsByStage(input = {}) {
+    const stage = String(input.stage || '').trim();
+    if (!stage) {
+      throw new Error('stage is required');
+    }
+    return withRetry(() => listStationsByStageRecord(stage), {
+      retries: 1,
+      baseDelayMs: 250,
+    });
+  },
+
+  // Handles findStationByLocation.
+  async findStationByLocation(input = {}) {
+    const location = normalizeLocation(input.location || input);
+    const radiusMeters = toPositiveInt(
+      input.radiusMeters,
+      toPositiveInt(
+        process.env.STATION_DUPLICATE_RADIUS_METERS,
+        1000,
+        'radiusMeters',
+      ),
+      'radiusMeters',
+    );
+    return withRetry(
+      () =>
+        findStationByLocationRecord({
+          location,
+          radiusMeters,
+        }),
+      { retries: 1, baseDelayMs: 250 },
+    );
+  },
+
+  // Handles getStation.
+  async getStation(input = {}) {
+    return withRetry(() => getStationById(input.stationId), {
+      retries: 1,
+      baseDelayMs: 250,
+    });
+  },
+
+  // Handles getStationByProposalId.
+  async getStationByProposalId(input = {}) {
+    return withRetry(() => getStationByProposalIdRecord(input.proposalId), {
+      retries: 1,
+      baseDelayMs: 250,
+    });
+  },
+
+  // Handles saveStationDeployment.
+  async saveStationDeployment(input = {}) {
+    const stationId = toPositiveInt(input.stationId, undefined, 'stationId');
+    return withRetry(
+      () =>
+        saveStationDeploymentRecord({
+          proposalId: input.proposalId,
+          stationId,
+          metadataUri: input.metadataUri,
+          deployment: input.deployment,
+        }),
+      { retries: 1, baseDelayMs: 250 },
+    );
+  },
+
+  // Handles saveIssuedAssets.
+  async saveIssuedAssets(input = {}) {
+    const stationId = toPositiveInt(input.stationId, undefined, 'stationId');
+    return withRetry(
+      () =>
+        saveIssuedAssets({
+          proposalId: input.proposalId,
+          stationId,
+          cap: input.cap,
+          shares: input.shares,
+          pricing: parsePricing(input.pricing),
+          metadataUri: input.metadataUri,
+          equity: input.equity,
+          bond: input.bond,
+          metadata: input.metadata,
+        }),
+      { retries: 1, baseDelayMs: 250 },
+    );
   },
 };
 
