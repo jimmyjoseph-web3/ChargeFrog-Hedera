@@ -244,26 +244,24 @@ function normalizeStationName(value, fallback = 'Station') {
   return String(fallback).replace(/\s+/g, ' ').trim() || 'Station';
 }
 
-function buildTokenSymbol(stationName, stationId, suffix = '') {
-  const normalizedName = normalizeStationName(stationName, 'ChargeFrog Station')
-    .toUpperCase()
-    .split(/\s+/)
-    .filter((token) => token && token !== 'CHARGEFROG' && token !== 'STATION');
-  const base =
-    normalizedName
-      .slice(0, 3)
-      .map((token) => token.replace(/[^A-Z0-9]/g, '').slice(0, 2))
-      .join('') || 'CF';
-  const normalizedStationId = toPositiveWholeNumber(stationId);
-  const stationPart = normalizedStationId
-    ? String(normalizedStationId).slice(-4)
-    : '0000';
-  const suffixPart = String(suffix || '')
+function buildTokenSymbol(stationName, stationId, suffix) {
+  const namePart = String(stationName || '')
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
-    .slice(0, 3);
-
-  return `${base}${stationPart}${suffixPart}`.slice(0, 12);
+    .slice(0, 4);
+  const idPart =
+    String(stationId || '')
+      .replace(/\D/g, '')
+      .slice(-2) || '00';
+  const raw =
+    `CF${namePart}${idPart}${String(suffix || '').toUpperCase()}`.replace(
+      /[^A-Z0-9]/g,
+      '',
+    );
+  const sliced = raw.slice(0, 10);
+  return (
+    sliced || `CF${idPart}${String(suffix || '').toUpperCase()}`.slice(0, 10)
+  );
 }
 
 function parseIntentRuleBased(message) {
