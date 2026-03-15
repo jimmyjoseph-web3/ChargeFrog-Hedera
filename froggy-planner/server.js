@@ -372,6 +372,15 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+    if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/agent/froggy-planner'
+  ) {
+    return handleApiRequest(req, res, runAgent);
+  }
+
+
 
 
   return sendJson(res, 404, { ok: false, error: 'Route not found' });
