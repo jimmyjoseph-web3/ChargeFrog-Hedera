@@ -290,3 +290,35 @@ async function getGuardianWithAccessToken(pathname, accessToken) {
     Accept: '*/*',
   });
 }
+
+async function putGuardianWithAccessToken(pathname, payload, accessToken) {
+  const token = String(accessToken || '').trim();
+  if (!token) {
+    throw new Error('Guardian accessToken is required');
+  }
+
+  return putGuardianJson(pathname, payload, {
+    Authorization: `Bearer ${token}`,
+    Accept: '*/*',
+  });
+}
+
+async function postGuardianPolicyBlock(input = {}) {
+  const accessToken = String(input.accessToken || '').trim();
+  const policyId = String(input.policyId || '').trim();
+  const blockUUID = String(input.blockUUID || '').trim();
+  const payload = toObject(input.payload, {});
+
+  if (!accessToken) throw new Error('Guardian accessToken is required');
+  if (!policyId) throw new Error('Guardian policyId is required');
+  if (!blockUUID) throw new Error('Guardian blockUUID is required');
+
+  return postGuardianJson(
+    `/policies/${encodeURIComponent(policyId)}/blocks/${encodeURIComponent(blockUUID)}`,
+    payload,
+    {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: '*/*',
+    },
+  );
+}
