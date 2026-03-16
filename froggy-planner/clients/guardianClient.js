@@ -84,3 +84,52 @@ function parseJsonSafe(value) {
   }
 }
 
+
+function truncateText(value, maxLength = 600) {
+  const text = String(value || '');
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3)}...`;
+}
+
+function toPositiveInteger(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.trunc(parsed);
+}
+
+function ensureJsonSchemaDocument(
+  input = {},
+  schemaUuid,
+  schemaName,
+  schemaDescription,
+) {
+  const source = toObject(input, {});
+  const hasExplicitDocument =
+    source.document && typeof source.document === 'object';
+  if (hasExplicitDocument) {
+    const doc = { ...source.document };
+    if (!doc.$id) doc.$id = `#${schemaUuid}`;
+    if (!doc.$comment) {
+      doc.$comment = `{ "@id": "schema:${schemaUuid}#${schemaUuid}", "term": "${schemaUuid}" }`;
+    }
+    return doc;
+  }
+
+  return {
+    $comment: `{ "@id": "schema:${schemaUuid}#${schemaUuid}", "term": "${schemaUuid}" }`,
+    $defs: toObject(source.$defs, {}),
+    $id: `#${schemaUuid}`,
+    additionalProperties:
+      source.additionalProperties === undefined
+        ? false
+        : Boolean(source.additionalProperties),
+    description: String(source.description || schemaDescription || ''),
+    properties: toObject(source.properties, {}),
+    required: Array.isArray(source.required)
+      ? source.required
+      : ['@context', 'type', 'policyId'],
+    title: String(source.title || schemaName || 'schema'),
+    type: String(source.type || 'object'),
+  };
+}
+
