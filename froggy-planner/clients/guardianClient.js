@@ -322,3 +322,24 @@ async function postGuardianPolicyBlock(input = {}) {
     },
   );
 }
+
+async function createPolicyWithGuardian(input = {}) {
+  const payload =
+    input.payload && typeof input.payload === 'object'
+      ? input.payload
+      : derivePayloadFromInput(input, []);
+
+  const refreshToken = await loginGuardianByRole('admin');
+  const accessToken = await exchangeAccessToken(refreshToken);
+  const result = await postGuardianWithAccessToken(
+    '/policies/push',
+    payload,
+    accessToken,
+  );
+
+  return {
+    mode: 'guardian_api',
+    action: 'create_policy',
+    result,
+  };
+}
