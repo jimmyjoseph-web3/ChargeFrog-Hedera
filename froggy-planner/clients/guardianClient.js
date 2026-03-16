@@ -447,3 +447,66 @@ function getSchemaTopicId(schema) {
 
   return findNestedTopicId(schema);
 }
+
+async function listSchemasByTopicIdWithGuardian(input = {}) {
+  const topicId = String(input.topicId || '').trim();
+  if (!topicId) {
+    throw new Error('topicId is required');
+  }
+
+  const pageSize = Math.min(toPositiveInteger(input.pageSize, 100), 200);
+  const maxPages = Math.min(toPositiveInteger(input.maxPages, 50), 200);
+
+  const refreshToken = await loginGuardianByRole('admin');
+  const accessToken = await exchangeAccessToken(refreshToken);
+
+  const schemas = [];
+  let fetchedPages = 0;
+  let scanned = 0;
+
+  for (let pageIndex = 0; pageIndex < maxPages; pageIndex += 1) {
+    const query = new URLSearchParams({
+      pageIndex: String(pageIndex),
+      pageSize: String(pageSize),
+    });
+    const pageResult = await getGuardianWithAccessToken(
+      `/schemas?${query.toString()}`,
+      accessToken,
+    );
+
+    const pageItems = Array.isArray(pageResult)
+      ? pageResult
+      : Array.isArray(pageResult?.schemas)
+        ? pageResult.schemas
+        : Array.isArray(pageResult?.data)
+          ? pageResult.data
+          : [];
+
+    fetchedPages += 1;
+    if (pageItems.length === 0) {
+      break;
+    }
+
+    scanned += pageItems.length;
+    for (const item of pageItems) {
+      if (getSchemaTopicId(item) === topicId) {
+        schemas.push(item);
+      }
+    }
+
+    if (pageItems.length < pageSize) {
+      break;
+    }
+  }
+
+  return {
+    mode: 'guardian_api',
+    action: 'list_schemas_by_topic',
+    topicId,
+    count: schemas.length,
+    scanned,
+    pageSize,
+    fetchedPages,
+    schemas,
+  };
+}
