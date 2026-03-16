@@ -224,3 +224,45 @@ async function getGuardianJson(pathname, headers = {}) {
   return responseJson !== null ? responseJson : { raw: responseText };
 }
 
+async function loginGuardianByRole(role = 'admin') {
+  const lowerRole = String(role || 'admin')
+    .trim()
+    .toLowerCase();
+  const isTreasury = lowerRole === 'treasury';
+
+  const username = envValue(
+    isTreasury ? 'TREASURY_USERNAME' : 'ADMIN_USERNAME',
+  );
+  const password = envValue(
+    isTreasury ? 'TREASURY_PASSWORD' : 'ADMIN_PASSWORD',
+  );
+  if (!username || !password) {
+    throw new Error(
+      `Missing ${isTreasury ? 'TREASURY' : 'ADMIN'}_USERNAME or ${isTreasury ? 'TREASURY' : 'ADMIN'}_PASSWORD in .env`,
+    );
+  }
+
+  const loginPayload = await postGuardianJson('/accounts/login', {
+    username,
+    password,
+  });
+
+  const refreshToken = loginPayload?.refreshToken;
+  if (!refreshToken) {
+    throw new Error('Guardian login succeeded but refreshToken was missing');
+  }
+  return refreshToken;
+}
+
+async function exchangeAccessToken(refreshToken) {
+  const payload = await postGuardianJson('/accounts/access-token', {
+    refreshToken: String(refreshToken || ''),
+  });
+  const accessToken = payload?.accessToken;
+  if (!accessToken) {
+    throw new Error(
+      'Guardian access-token response did not include accessToken',
+    );
+  }
+  return accessToken;
+}
