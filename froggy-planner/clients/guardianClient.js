@@ -56,3 +56,31 @@ function derivePayloadFromInput(input, excludedKeys = []) {
   }
   return payload;
 }
+
+function generateUuid() {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return [
+    crypto.randomBytes(4).toString('hex'),
+    crypto.randomBytes(2).toString('hex'),
+    crypto.randomBytes(2).toString('hex'),
+    crypto.randomBytes(2).toString('hex'),
+    crypto.randomBytes(6).toString('hex'),
+  ].join('-');
+}
+
+function normalizeBaseUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return raw.replace(/\/+$/, '');
+}
+
+function parseJsonSafe(value) {
+  try {
+    return JSON.parse(value);
+  } catch (_error) {
+    return null;
+  }
+}
+
