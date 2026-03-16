@@ -266,3 +266,27 @@ async function exchangeAccessToken(refreshToken) {
   }
   return accessToken;
 }
+
+async function postGuardianWithAccessToken(pathname, payload, accessToken) {
+  const token = String(accessToken || '').trim();
+  if (!token) {
+    throw new Error('Guardian accessToken is required');
+  }
+
+  return postGuardianJson(pathname, payload, {
+    Authorization: `Bearer ${token}`,
+    Accept: '*/*',
+  });
+}
+
+async function getGuardianWithAccessToken(pathname, accessToken) {
+  const token = String(accessToken || '').trim();
+  if (!token) {
+    throw new Error('Guardian accessToken is required');
+  }
+
+  return getGuardianJson(pathname, {
+    Authorization: `Bearer ${token}`,
+    Accept: '*/*',
+  });
+}
