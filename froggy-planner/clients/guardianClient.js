@@ -133,3 +133,52 @@ function ensureJsonSchemaDocument(
   };
 }
 
+function normalizeSchemaPushPayload(input = {}) {
+  const source = toObject(input, {});
+  const schemaUuid = String(source.uuid || generateUuid()).trim();
+  const schemaName = String(source.name || 'schema').trim();
+  const schemaDescription = String(source.description || '').trim();
+  const document = ensureJsonSchemaDocument(
+    source,
+    schemaUuid,
+    schemaName,
+    schemaDescription,
+  );
+
+  return {
+    uuid: schemaUuid,
+    hash: String(source.hash || ''),
+    name: schemaName,
+    description: schemaDescription,
+    entity: String(source.entity || 'VC'),
+    status: String(source.status || 'DRAFT'),
+    category: String(source.category || 'POLICY'),
+    readonly: source.readonly === undefined ? false : Boolean(source.readonly),
+    contextURL: String(source.contextURL || `schema:${schemaUuid}`),
+    documentURL: String(source.documentURL || ''),
+    iri: String(source.iri || ''),
+    messageId: String(source.messageId || ''),
+    owner: String(source.owner || ''),
+    creator: String(source.creator || ''),
+    codeVersion: String(source.codeVersion || ''),
+    sourceVersion: String(source.sourceVersion || ''),
+    version: String(source.version || ''),
+    userDID: source.userDID === undefined ? null : source.userDID,
+    active: source.active === undefined ? false : Boolean(source.active),
+    system: source.system === undefined ? false : Boolean(source.system),
+    errors: Array.isArray(source.errors) ? source.errors : [],
+    fields: Array.isArray(source.fields) ? source.fields : [],
+    conditions: Array.isArray(source.conditions) ? source.conditions : [],
+    context: source.context === undefined ? null : source.context,
+    document,
+  };
+}
+
+function getGuardianBaseUrl() {
+  const baseUrl = normalizeBaseUrl(envValue('URL'));
+  if (!baseUrl) {
+    throw new Error('Missing URL in .env');
+  }
+  return baseUrl;
+}
+
