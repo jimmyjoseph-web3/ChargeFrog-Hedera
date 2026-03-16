@@ -182,3 +182,45 @@ function getGuardianBaseUrl() {
   return baseUrl;
 }
 
+async function postGuardianJson(pathname, body, headers = {}) {
+  const url = `${getGuardianBaseUrl()}${pathname}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...headers,
+    },
+    body: JSON.stringify(toObject(body, {})),
+  });
+
+  const responseText = await response.text();
+  const responseJson = parseJsonSafe(responseText);
+  if (!response.ok) {
+    throw new Error(
+      `Guardian request failed (${response.status}) ${pathname}: ${truncateText(responseText || response.statusText)}`,
+    );
+  }
+  return responseJson !== null ? responseJson : { raw: responseText };
+}
+
+async function getGuardianJson(pathname, headers = {}) {
+  const url = `${getGuardianBaseUrl()}${pathname}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      ...headers,
+    },
+  });
+
+  const responseText = await response.text();
+  const responseJson = parseJsonSafe(responseText);
+  if (!response.ok) {
+    throw new Error(
+      `Guardian request failed (${response.status}) ${pathname}: ${truncateText(responseText || response.statusText)}`,
+    );
+  }
+  return responseJson !== null ? responseJson : { raw: responseText };
+}
+
