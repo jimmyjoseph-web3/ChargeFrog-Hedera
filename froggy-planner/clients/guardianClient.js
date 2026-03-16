@@ -343,3 +343,73 @@ async function createPolicyWithGuardian(input = {}) {
     result,
   };
 }
+
+async function getPolicyByIdWithGuardian(input = {}) {
+  const policyId = String(input.policyId || '').trim();
+  if (!policyId) {
+    throw new Error('policyId is required');
+  }
+
+  const refreshToken = await loginGuardianByRole('admin');
+  const accessToken = await exchangeAccessToken(refreshToken);
+  const result = await getGuardianWithAccessToken(
+    `/policies/${encodeURIComponent(policyId)}`,
+    accessToken,
+  );
+
+  return {
+    mode: 'guardian_api',
+    action: 'get_policy',
+    policyId,
+    result,
+  };
+}
+
+async function listPoliciesWithGuardian(input = {}) {
+  const pageSize = Math.min(toPositiveInteger(input.pageSize, 100), 200);
+  const maxPages = Math.min(toPositiveInteger(input.maxPages, 50), 200);
+
+  const refreshToken = await loginGuardianByRole('admin');
+  const accessToken = await exchangeAccessToken(refreshToken);
+
+  const policies = [];
+  let fetchedPages = 0;
+
+  for (let pageIndex = 0; pageIndex < maxPages; pageIndex += 1) {
+    const query = new URLSearchParams({
+      pageIndex: String(pageIndex),
+      pageSize: String(pageSize),
+    });
+    const pageResult = await getGuardianWithAccessToken(
+      `/policies?${query.toString()}`,
+      accessToken,
+    );
+
+    const pageItems = Array.isArray(pageResult)
+      ? pageResult
+      : Array.isArray(pageResult?.policies)
+        ? pageResult.policies
+        : Array.isArray(pageResult?.data)
+          ? pageResult.data
+          : [];
+
+    fetchedPages += 1;
+    if (pageItems.length === 0) {
+      break;
+    }
+
+    policies.push(...pageItems);
+    if (pageItems.length < pageSize) {
+      break;
+    }
+  }
+
+  return {
+    mode: 'guardian_api',
+    action: 'list_policies',
+    count: policies.length,
+    pageSize,
+    fetchedPages,
+    policies,
+  };
+}
