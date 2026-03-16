@@ -413,3 +413,37 @@ async function listPoliciesWithGuardian(input = {}) {
     policies,
   };
 }
+
+function getSchemaTopicId(schema) {
+  const topicKeys = ['topicId', 'topicID', 'topic_id', 'policyTopicId'];
+
+  function findNestedTopicId(value, depth = 6) {
+    if (depth < 0 || value === null || value === undefined) return null;
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const nested = findNestedTopicId(item, depth - 1);
+        if (nested) return nested;
+      }
+      return null;
+    }
+
+    if (typeof value !== 'object') return null;
+
+    for (const key of topicKeys) {
+      const direct = value[key];
+      if (direct === undefined || direct === null) continue;
+      const normalized = String(direct).trim();
+      if (normalized) return normalized;
+    }
+
+    for (const nestedValue of Object.values(value)) {
+      const nested = findNestedTopicId(nestedValue, depth - 1);
+      if (nested) return nested;
+    }
+
+    return null;
+  }
+
+  return findNestedTopicId(schema);
+}
