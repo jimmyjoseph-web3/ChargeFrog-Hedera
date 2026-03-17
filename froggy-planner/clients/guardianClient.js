@@ -598,3 +598,39 @@ async function publishPolicyByIdWithGuardianTreasury(input = {}) {
     result,
   };
 }
+
+async function createSchemaWithGuardian(input = {}) {
+  const topicId = String(input.topicId || '').trim();
+  if (!topicId) {
+    throw new Error('topicId is required');
+  }
+
+  const sourcePayload =
+    input.payload && typeof input.payload === 'object'
+      ? input.payload
+      : derivePayloadFromInput(input, ['topicId']);
+  if (
+    !sourcePayload ||
+    typeof sourcePayload !== 'object' ||
+    Object.keys(sourcePayload).length === 0
+  ) {
+    throw new Error('Schema payload is required');
+  }
+
+  const payload = normalizeSchemaPushPayload(sourcePayload);
+  const refreshToken = await loginGuardianByRole('admin');
+  const accessToken = await exchangeAccessToken(refreshToken);
+  const result = await postGuardianWithAccessToken(
+    `/schemas/push/${encodeURIComponent(topicId)}`,
+    payload,
+    accessToken,
+  );
+
+  return {
+    mode: 'guardian_api',
+    action: 'create_schema',
+    topicId,
+    uuid: payload.uuid || null,
+    result,
+  };
+}
