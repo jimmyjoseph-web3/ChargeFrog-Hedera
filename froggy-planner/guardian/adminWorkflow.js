@@ -124,3 +124,149 @@ function isCreatePolicyIntent(message) {
 function isGuardianAdminIntent(message) {
   return isListFullyInvestedIntent(message) || isCreatePolicyIntent(message);
 }
+
+function formatStationChoices(stations) {
+  const items = Array.isArray(stations) ? stations : [];
+  if (items.length === 0) return '';
+  return items
+    .slice(0, 10)
+    .map(
+      (station) =>
+        `${station.stationName || 'Unnamed station'} (stationId ${station.stationId})`,
+    )
+    .join('; ');
+}
+
+async function runGuardianAdminWorkflow(input = {}) {
+  const allowedKeys = new Set(['message', 'stationId']);
+  const extraKeys = Object.keys(input || {}).filter((key) => !allowedKeys.has(key));
+  if (extraKeys.length > 0) {
+    throw new Error(
+      `Unsupported fields for /api/agent/guardian-admin-chat: ${extraKeys.join(', ')}. Allowed fields: message, stationId`,
+    );
+  }
+
+  const message = String(input.message || '').trim();
+  if (!message) {
+    throw new Error('message is required');
+  }
+
+  if (isListFullyInvestedIntent(message)) {
+    const stations = await guardianAdminTools.listFullyInvestedStations();
+    const stationSummary = formatStationChoices(stations);
+    const reply =
+      stations.length === 0
+        ? renderGuardianReply('adminNoFullyInvestedStations')
+        : stations.length === 1
+          ? renderGuardianReply('adminListOneFullyInvestedStation', {
+              STATION_SUMMARY: stationSummary,
+            })
+          : renderGuardianReply('adminListMultipleFullyInvestedStations', {
+              STATION_COUNT: stations.length,
+              STATION_SUMMARY: stationSummary,
+            });
+    return {
+      intent: 'LIST_FULLY_INVESTED_STATIONS',
+      reply,
+      stations: stations.map((station) => ({
+        stationId: station.stationId,
+        stationName: station.stationName,
+        stage: station.stage,
+        proposalId: station.proposalId,
+      })),
+    };
+  }
+
+  if (isCreatePolicyIntent(message)) {
+    const fullyInvestedStations =
+      await guardianAdminTools.listFullyInvestedStations();
+    if (fullyInvestedStations.length === 0) {
+      return {
+        intent: 'CREATE_GUARDIAN_POLICIES_FOR_STATION',
+        blocked: true,
+        reply: renderGuardianReply('adminNoSourceStations'),
+        stations: [],
+      };
+    }
+
+    const stationNameHint = extractStationNameFromMessage(message);
+    const matchedStation =
+      findBestStationByNameHint(fullyInvestedStations, stationNameHint) || null;
+    const defaultStation =
+      !matchedStation && fullyInvestedStations.length === 1
+        ? fullyInvestedStations[0]
+        : null;
+    const stationId =
+      matchedStation?.stationId ||
+      defaultStation?.stationId ||
+      parseStationId(input.stationId) ||
+      extractStationIdFromMessage(message);
+
+    if (!stationId) {
+      return {
+        intent: 'CREATE_GUARDIAN_POLICIES_FOR_STATION',
+        blocked: true,
+        reply: renderGuardianReply('adminUnresolvedStation', {
+          STATION_SUMMARY: formatStationChoices(fullyInvestedStations),
+        }),
+        stations: fullyInvestedStations.map((station) => ({
+          stationId: station.stationId,
+          stationName: station.stationName,
+          stage: station.stage,
+          proposalId: station.proposalId,
+        })),
+      };
+    }
+
+    const station = await guardianAdminTools.getStationById({ stationId });
+    if (String(station.stage || '').trim() !== 'fully-invested') {
+      return {
+        intent: 'CREATE_GUARDIAN_POLICIES_FOR_STATION',
+        blocked: true,
+        stationId,
+        reply: renderGuardianReply('adminStationNotFullyInvested', {
+          STATION_ID: stationId,
+        }),
+        station,
+      };
+    }
+
+    const strippedStationName = stripChargeFrogStationPrefix(station.stationName);
+    if (!strippedStationName) {
+      throw new Error(`Unable to derive canonical stationName from stationId ${stationId}`);
+    }
+
+    const result = await guardianAdminTools.createStationPolicies({
+      stationName: strippedStationName,
+      carbonTemplatePolicyId: FIXED_CARBON_TEMPLATE_POLICY_ID,
+      wipeTemplatePolicyId: FIXED_WIPE_TEMPLATE_POLICY_ID,
+      policyVersion: FIXED_POLICY_VERSION,
+    });
+
+    return {
+      intent: 'CREATE_GUARDIAN_POLICIES_FOR_STATION',
+      stationId,
+      stationName: strippedStationName,
+      reply:
+        fullyInvestedStations.length === 1 && !stationNameHint
+          ? renderGuardianReply('adminAutoSelectedSingleStation', {
+              STATION_NAME: station.stationName,
+            })
+          : renderGuardianReply('adminSelectedStation', {
+              STATION_NAME: station.stationName,
+            }),
+      result,
+    };
+  }
+
+  return {
+    intent: 'GENERAL',
+    blocked: true,
+    reply: renderGuardianReply('adminGeneralBlocked'),
+  };
+}
+
+module.exports = {
+  isGuardianAdminIntent,
+  runGuardianAdminWorkflow,
+};
