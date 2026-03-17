@@ -88,3 +88,28 @@ function findFirstStringByKeys(value, keys, maxDepth = 6) {
 
   return null;
 }
+
+function extractPolicyId(policy) {
+  if (!isPlainObject(policy)) return null;
+  return firstNonEmpty([policy.policyId, policy.id, policy.uuid, policy._id]);
+}
+
+function extractPolicyTopicId(policy) {
+  if (!isPlainObject(policy)) return null;
+  return findFirstStringByKeys(policy, [
+    'topicId',
+    'topicID',
+    'topic_id',
+    'instanceTopicId',
+    'synchronizationTopicId',
+  ]);
+}
+
+function extractPolicyConfig(policy) {
+  if (!isPlainObject(policy)) return null;
+  if (isPlainObject(policy.config)) return policy.config;
+  if (isPlainObject(policy.policy) && isPlainObject(policy.policy.config)) {
+    return policy.policy.config;
+  }
+  return null;
+}
