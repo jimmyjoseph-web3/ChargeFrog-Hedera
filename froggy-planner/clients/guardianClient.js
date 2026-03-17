@@ -668,3 +668,55 @@ function resolveWipeBlockConfig(input = {}) {
 
   return { policyId, blockUUID };
 }
+
+function getMirrorNodeBaseUrl(network) {
+  if (network !== TESTNET_NETWORK) {
+    throw new Error('Guardian is configured for testnet only');
+  }
+  return DEFAULT_TESTNET_MIRROR_BASE;
+}
+
+function resolveTestnetNetwork(inputNetwork) {
+  const network = String(inputNetwork || TESTNET_NETWORK)
+    .trim()
+    .toLowerCase();
+  if (network !== TESTNET_NETWORK) {
+    throw new Error('Guardian is configured for testnet only');
+  }
+  return TESTNET_NETWORK;
+}
+
+async function fetchAllNftsForToken(tokenId, network) {
+  const normalizedTokenId = String(tokenId || '').trim();
+  if (!normalizedTokenId) {
+    throw new Error('tokenId is required for auto wipe');
+  }
+
+  const baseUrl = getMirrorNodeBaseUrl(network);
+  const baseOrigin = new URL(baseUrl).origin;
+  let nextUrl = `${baseUrl}/tokens/${encodeURIComponent(normalizedTokenId)}/nfts?limit=100`;
+  const results = [];
+
+  while (nextUrl) {
+    const response = await fetch(nextUrl);
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(
+        `Mirror node NFT lookup failed (${response.status}): ${truncateText(body)}`,
+      );
+    }
+    const payload = await response.json();
+    if (Array.isArray(payload?.nfts)) {
+      results.push(...payload.nfts);
+    }
+
+    if (payload?.links?.next) {
+      const next = String(payload.links.next);
+      nextUrl = next.startsWith('http') ? next : `${baseOrigin}${next}`;
+    } else {
+      nextUrl = '';
+    }
+  }
+
+  return results;
+}
