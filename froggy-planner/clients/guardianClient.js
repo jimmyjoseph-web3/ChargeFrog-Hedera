@@ -935,3 +935,33 @@ function parseHederaPrivateKey(rawKey) {
 
   return PrivateKey.fromString(normalized);
 }
+
+function resolveTokenIds(input = {}) {
+  const rawMany = Array.isArray(input.tokenIds) ? input.tokenIds : null;
+  const rawSingle = input.tokenId || envValue('tokenId');
+
+  const values = rawMany && rawMany.length > 0 ? rawMany : [rawSingle];
+  const tokenIds = values
+    .map((value) => {
+      if (value && typeof value === 'object' && 'value' in value) {
+        return String(value.value || '').trim();
+      }
+      return String(value || '').trim();
+    })
+    .filter((value) => value !== '');
+
+  if (tokenIds.length === 0) {
+    throw new Error('tokenId or tokenIds is required');
+  }
+  return tokenIds;
+}
+
+function resolveAccountId(input = {}) {
+  const raw =
+    input.accountId || input.targetAccountId || envValue('OPERATOR_ID');
+  const accountId = String(raw || '').trim();
+  if (!accountId) {
+    throw new Error('accountId is required for token association');
+  }
+  return accountId;
+}
