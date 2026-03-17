@@ -965,3 +965,58 @@ function resolveAccountId(input = {}) {
   }
   return accountId;
 }
+
+async function associateTokenWithHederaSdk(input = {}) {
+  const network = resolveTestnetNetwork(input.network);
+  const accountId = resolveAccountId(input);
+  const tokenIds = resolveTokenIds(input);
+  const privateKey = parseHederaPrivateKey(
+    input.privateKey || envValue('OPERATOR_KEY'),
+  );
+
+  const client = createHederaClient(network);
+  try {
+    const account = AccountId.fromString(accountId);
+    client.setOperator(account, privateKey);
+
+    const tx = new TokenAssociateTransaction()
+      .setAccountId(account)
+      .setTokenIds(tokenIds.map((id) => TokenId.fromString(id)));
+
+    const memo = String(input.memo || '').trim();
+    if (memo) {
+      tx.setTransactionMemo(memo.slice(0, 100));
+    }
+
+    const response = await tx.execute(client);
+    const receipt = await response.getReceipt(client);
+
+    return {
+      mode: 'hedera_sdk',
+      action: 'token_associate',
+      network,
+      accountId,
+      tokenIds,
+      transactionId: response.transactionId?.toString() || null,
+      status: receipt.status?.toString() || null,
+    };
+  } finally {
+    if (typeof client.close === 'function') {
+      client.close();
+    }
+  }
+}
+
+module.exports = {
+  createPolicyWithGuardian,
+  createSchemaWithGuardian,
+  listPoliciesWithGuardian,
+  listSchemasByTopicIdWithGuardian,
+  getPolicyByIdWithGuardian,
+  updatePolicyByIdWithGuardian,
+  publishPolicyByIdWithGuardian,
+  publishPolicyByIdWithGuardianTreasury,
+  mintWithGuardian,
+  wipeWithGuardian,
+  associateTokenWithHederaSdk,
+};
