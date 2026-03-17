@@ -492,3 +492,51 @@ async function callGuardianWorkerAgent({
   });
   return result;
 }
+
+async function runGuardianPolicySummarizerAgent(input = {}) {
+  const stationName = normalizeStationName(input.stationName);
+  if (!stationName) {
+    return {
+      intent: INTENTS.POLICY_ENQUIRY,
+      stationName: null,
+      blocked: true,
+      summary: renderGuardianReply('chatMissingStationSummary'),
+      reply: renderGuardianReply('chatMissingStationReply'),
+    };
+  }
+
+  const policiesResponse = await guardianTools.listPolicies({});
+  const policies = normalizePolicyListResponse(policiesResponse);
+  const matchedPolicies = matchPoliciesByStationName(policies, stationName);
+
+  if (matchedPolicies.length === 0) {
+    return {
+      intent: INTENTS.POLICY_ENQUIRY,
+      stationName,
+      blocked: true,
+      summary: renderGuardianReply('chatNoPoliciesSummary', {
+        STATION_NAME: stationName,
+      }),
+      reply: renderGuardianReply('chatNoPoliciesReply', {
+        STATION_NAME: stationName,
+      }),
+      matchedPolicies: [],
+    };
+  }
+
+  const detailedPolicies = await loadDetailedPolicies(matchedPolicies);
+  const policySummaries = detailedPolicies.map((policy) =>
+    summarizePolicyRecord(policy),
+  );
+  const reply = await summarizeGuardianReply({
+    stationName,
+    policySummaries,
+  });
+
+  return {
+    intent: INTENTS.POLICY_ENQUIRY,
+    stationName,
+    reply,
+    policySummaries,
+  };
+}
