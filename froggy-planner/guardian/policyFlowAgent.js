@@ -505,3 +505,49 @@ async function resolveCreatedSchemaUri(topicId, schemaName) {
   }
   return schemaUri;
 }
+
+function buildPolicyCreatePayload(policyName, sanitizedConfig) {
+  return {
+    name: policyName,
+    applicabilityConditions: '',
+    detailsUrl: '',
+    policyTag: buildPolicyTag(),
+    typicalProjects: '',
+    topicDescription: '',
+    description: '',
+    categories: DEFAULT_POLICY_CATEGORIES.slice(),
+    importantParameters: {
+      atValidation: '',
+      monitored: '',
+    },
+    config: sanitizedConfig,
+  };
+}
+
+function buildPolicyUpdatePayload(
+  policyName,
+  updatedConfig,
+  existingPolicy = null,
+) {
+  const existing = isPlainObject(existingPolicy) ? existingPolicy : {};
+  const policyTag = firstNonEmpty([
+    existing.policyTag,
+    existing.tag,
+    buildPolicyTag(),
+  ]);
+  return {
+    name: policyName,
+    applicabilityConditions: '',
+    detailsUrl: '',
+    policyTag,
+    typicalProjects: '',
+    topicDescription: '',
+    description: '',
+    categories: DEFAULT_POLICY_CATEGORIES.slice(),
+    importantParameters: {
+      atValidation: '',
+      monitored: '',
+    },
+    config: updatedConfig,
+  };
+}
