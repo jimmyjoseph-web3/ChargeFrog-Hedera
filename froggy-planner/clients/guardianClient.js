@@ -651,3 +651,20 @@ function resolveMintBlockConfig(input = {}) {
 
   return { policyId, blockUUID };
 }
+
+function resolveWipeBlockConfig(input = {}) {
+  const policyId = String(
+    input.policyId || envValue('wipeTokenRequestVCBlock_policyID') || '',
+  ).trim();
+  const blockUUID = String(
+    input.blockUUID || envValue('wipeTokenRequestVCBlock_blockUUID') || '',
+  ).trim();
+
+  if (!policyId || !blockUUID) {
+    throw new Error(
+      'Missing wipe block config. Set wipeTokenRequestVCBlock_policyID + wipeTokenRequestVCBlock_blockUUID.',
+    );
+  }
+
+  return { policyId, blockUUID };
+}
