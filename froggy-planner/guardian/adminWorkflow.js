@@ -96,3 +96,31 @@ function findBestStationByNameHint(stations, stationNameHint) {
 
   return best && best.score >= 35 ? best.station : null;
 }
+
+function isListFullyInvestedIntent(message) {
+  const text = String(message || '').toLowerCase();
+  return (
+    text.includes('fully-invested') ||
+    text.includes('fully invested')
+  ) && text.includes('station');
+}
+
+function isCreatePolicyIntent(message) {
+  const text = String(message || '').toLowerCase();
+  const wantsCreation =
+    /\b(yes|create|proceed|go ahead|generate|make|set up|setup|replicate)\b/i.test(
+      text,
+    );
+  const wantsGuardianArtifacts =
+    /\b(policy|policies|schema|schemas|guardian)\b/i.test(text);
+  const referencesPastStations =
+    /\b(old|past|previous|existing|fully[-\s]?invested)\b/i.test(text);
+  return (
+    (wantsCreation && wantsGuardianArtifacts) ||
+    (wantsGuardianArtifacts && referencesPastStations)
+  );
+}
+
+function isGuardianAdminIntent(message) {
+  return isListFullyInvestedIntent(message) || isCreatePolicyIntent(message);
+}
