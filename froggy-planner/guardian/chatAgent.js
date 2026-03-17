@@ -438,3 +438,57 @@ function buildDeterministicPolicyReply(stationName, policySummaries) {
 
   return lines.join(' ');
 }
+
+async function summarizeGuardianReply({ stationName, policySummaries }) {
+  const config = getOpenAIConfigIfAvailable();
+  if (!config) {
+    return buildDeterministicPolicyReply(stationName, policySummaries);
+  }
+
+  const prompt = GUARDIAN_POLICY_SUMMARY_PROMPT;
+
+  const payload = {
+    stationName,
+    policies: policySummaries,
+  };
+
+  try {
+    const completion = await createOpenAiChatCompletion({
+      model: config.model,
+      reasoningEffort: process.env.GUARDIAN_AGENT_REASONING_EFFORT || 'medium',
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content: JSON.stringify(payload) },
+      ],
+    });
+    const parsed = extractJsonObject(readCompletionText(completion));
+    if (parsed && typeof parsed.reply === 'string' && parsed.reply.trim()) {
+      return parsed.reply.trim();
+    }
+  } catch (_error) {
+    // Fall back below.
+  }
+
+  return buildDeterministicPolicyReply(stationName, policySummaries);
+}
+
+async function callGuardianWorkerAgent({
+  endpointPath,
+  payload,
+  action,
+  correlationId,
+}) {
+  const result = await callInternalA2aAgent({
+    endpointPath,
+    data: {
+      ...(payload && typeof payload === 'object' ? payload : {}),
+      ...(correlationId ? { correlationId } : {}),
+    },
+    metadata: {
+      source: 'guardian_coordinator',
+      action,
+      ...(correlationId ? { correlationId } : {}),
+    },
+  });
+  return result;
+}
