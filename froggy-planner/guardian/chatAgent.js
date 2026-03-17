@@ -113,3 +113,53 @@ function extractPolicyConfig(policy) {
   }
   return null;
 }
+
+function normalizeStationName(value) {
+  return String(value || '')
+    .replace(/^ChargeFrog Station\s*-\s*/i, '')
+    .replace(/^ChargeFrog\s*-\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function escapeRegex(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildStationRegex(stationName) {
+  const normalized = normalizeStationName(stationName);
+  if (!normalized) return null;
+  const pattern = escapeRegex(normalized).replace(/\s+/g, '\\s+');
+  return new RegExp(pattern, 'i');
+}
+
+function extractStationNameHeuristic(message) {
+  const raw = String(message || '').trim();
+  if (!raw) return null;
+
+  const quoted = raw.match(/["“](.+?)["”]/);
+  if (quoted && quoted[1]) {
+    return normalizeStationName(quoted[1]);
+  }
+
+  const chargeFrogMatch = raw.match(
+    /ChargeFrog(?:\s+Station)?\s*-\s*([A-Za-z0-9 .,'&()/-]+)/i,
+  );
+  if (chargeFrogMatch && chargeFrogMatch[1]) {
+    return normalizeStationName(chargeFrogMatch[1]);
+  }
+
+  const stationMatch = raw.match(/\bstation\s+([A-Za-z0-9 .,'&()/-]{3,})$/i);
+  if (stationMatch && stationMatch[1]) {
+    return normalizeStationName(stationMatch[1]);
+  }
+
+  const trailingMatch = raw.match(
+    /\b(?:for|of|about)\s+([A-Za-z0-9 .,'&()/-]{3,})$/i,
+  );
+  if (trailingMatch && trailingMatch[1]) {
+    return normalizeStationName(trailingMatch[1]);
+  }
+
+  return null;
+}
