@@ -64,3 +64,40 @@ function firstNonEmpty(values) {
   }
   return null;
 }
+
+function extractPolicyId(policy) {
+  if (!isPlainObject(policy)) return null;
+  return firstNonEmpty([policy.policyId, policy.id, policy.uuid, policy._id]);
+}
+
+function extractPolicyStatus(policy) {
+  if (!isPlainObject(policy)) return '';
+  return String(policy.status || '')
+    .trim()
+    .toUpperCase();
+}
+
+function extractPolicyName(policy) {
+  if (!isPlainObject(policy)) return '';
+  return String(policy.name || '').trim();
+}
+
+function extractPolicyTopicId(policy) {
+  if (!isPlainObject(policy)) return null;
+  return firstNonEmpty([
+    policy.topicId,
+    policy.topicID,
+    policy.topic_id,
+    policy.instanceTopicId,
+    policy.synchronizationTopicId,
+  ]);
+}
+
+function extractPolicyConfig(policy) {
+  if (!isPlainObject(policy)) return null;
+  if (isPlainObject(policy.config)) return deepClone(policy.config);
+  if (isPlainObject(policy.policy) && isPlainObject(policy.policy.config)) {
+    return deepClone(policy.policy.config);
+  }
+  return null;
+}
