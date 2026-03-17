@@ -755,3 +755,14 @@ function parseSerialRange(value) {
   }
   return { from, to };
 }
+
+function toSerialListFromOwnedNfts(nfts, accountId) {
+  const normalizedAccountId = String(accountId || '').trim();
+  return nfts
+    .filter(
+      (nft) => nft && nft.account_id === normalizedAccountId && !nft.deleted,
+    )
+    .map((nft) => Number(nft.serial_number))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .map((value) => Math.trunc(value));
+}
