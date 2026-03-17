@@ -158,3 +158,139 @@ function sanitizePolicyConfig(value, state, path = []) {
   }
   return output;
 }
+
+function setAtPath(root, path, value) {
+  let cursor = root;
+  for (let i = 0; i < path.length - 1; i += 1) {
+    const key = path[i];
+    const nextKey = path[i + 1];
+    const nextShouldBeArray = typeof nextKey === 'number';
+    if (!isPlainObject(cursor[key]) && !Array.isArray(cursor[key])) {
+      cursor[key] = nextShouldBeArray ? [] : {};
+    }
+    cursor = cursor[key];
+  }
+  cursor[path[path.length - 1]] = value;
+}
+
+function applySchemaUriToConfig(config, schemaReferencePaths, schemaUri) {
+  if (
+    !Array.isArray(schemaReferencePaths) ||
+    schemaReferencePaths.length === 0
+  ) {
+    throw new Error(
+      'Template config did not contain schema/presetSchema references to reattach',
+    );
+  }
+  const output = deepClone(config);
+  for (const path of schemaReferencePaths) {
+    if (!Array.isArray(path) || path.length === 0) continue;
+    setAtPath(output, path, schemaUri);
+  }
+  return output;
+}
+
+function forceSchemaBindings(config, schemaUri) {
+  const output = deepClone(config);
+  let sawSchema = false;
+  let sawPresetSchema = false;
+
+  function walk(node) {
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item);
+      return;
+    }
+    if (!isPlainObject(node)) {
+      return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(node, 'schema')) {
+      node.schema = schemaUri;
+      sawSchema = true;
+    }
+    if (Object.prototype.hasOwnProperty.call(node, 'presetSchema')) {
+      node.presetSchema = schemaUri;
+      sawPresetSchema = true;
+    }
+
+    const blockType = String(node.blockType || '').trim();
+    if (
+      blockType === 'requestVcDocumentBlock' ||
+      blockType === 'retirementDocumentBlock'
+    ) {
+      node.schema = schemaUri;
+      node.presetSchema = schemaUri;
+      sawSchema = true;
+      sawPresetSchema = true;
+    }
+
+    for (const value of Object.values(node)) {
+      walk(value);
+    }
+  }
+
+  walk(output);
+
+  if (!sawSchema) {
+    output.schema = schemaUri;
+    sawSchema = true;
+  }
+  if (!sawPresetSchema) {
+    output.presetSchema = schemaUri;
+    sawPresetSchema = true;
+  }
+
+  return output;
+}
+
+function findSchemaBindingStatus(config, schemaUri) {
+  let hasSchema = false;
+  let hasPresetSchema = false;
+
+  function walk(node) {
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item);
+      return;
+    }
+    if (!isPlainObject(node)) {
+      return;
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(node, 'schema') &&
+      String(node.schema || '').trim() === String(schemaUri || '').trim()
+    ) {
+      hasSchema = true;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(node, 'presetSchema') &&
+      String(node.presetSchema || '').trim() === String(schemaUri || '').trim()
+    ) {
+      hasPresetSchema = true;
+    }
+
+    for (const value of Object.values(node)) {
+      walk(value);
+    }
+  }
+
+  walk(config);
+  return { hasSchema, hasPresetSchema };
+}
+
+function parseSchemaDocument(schemaItem) {
+  const rawDocument = schemaItem?.document;
+  if (isPlainObject(rawDocument)) return rawDocument;
+  if (typeof rawDocument === 'string') {
+    try {
+      const parsed = JSON.parse(rawDocument);
+      if (!isPlainObject(parsed)) {
+        throw new Error('document JSON is not an object');
+      }
+      return parsed;
+    } catch (error) {
+      throw new Error(`Invalid schema document JSON: ${error.message}`);
+    }
+  }
+  throw new Error('Schema item does not include a valid document');
+}
