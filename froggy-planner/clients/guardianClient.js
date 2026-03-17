@@ -737,3 +737,21 @@ function resolveWipeField1(input = {}) {
   if (field1 === undefined || field1 === null) return '';
   return String(field1).trim();
 }
+
+function parseSerialRange(value) {
+  const raw = String(value || '').trim();
+  if (!raw.includes('-')) return null;
+
+  const [left, right] = raw.split('-');
+  const a = Number(left);
+  const b = Number(right);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) {
+    throw new Error('Invalid serial range. Use e.g. "4-8"');
+  }
+  const from = Math.min(Math.trunc(a), Math.trunc(b));
+  const to = Math.max(Math.trunc(a), Math.trunc(b));
+  if (from <= 0 || to <= 0) {
+    throw new Error('Serial range must contain positive integers');
+  }
+  return { from, to };
+}
