@@ -163,3 +163,89 @@ function extractStationNameHeuristic(message) {
 
   return null;
 }
+
+function extractJsonObject(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (_error) {
+    // Continue to bracket extraction.
+  }
+
+  const first = raw.indexOf('{');
+  const last = raw.lastIndexOf('}');
+  if (first === -1 || last === -1 || last <= first) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw.slice(first, last + 1));
+  } catch (_error) {
+    return null;
+  }
+}
+
+function getOpenAIConfigIfAvailable() {
+  const apiKey = firstNonEmpty([
+    process.env.OPENAI_KEY,
+    process.env.OPENAI_API_KEY,
+  ]);
+  if (!apiKey) return null;
+
+  return {
+    apiKey,
+    model: firstNonEmpty([
+      process.env.GUARDIAN_AGENT_MODEL,
+      process.env.AGENT_MODEL,
+      'gpt-5.2',
+    ]),
+    baseUrl: String(process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1')
+      .trim()
+      .replace(/\/$/, ''),
+  };
+}
+
+function normalizeReasoningEffort(value, fallback = 'medium') {
+  const raw = String(value || fallback || '')
+    .trim()
+    .toLowerCase();
+  if (raw === 'high' || raw === 'medium' || raw === 'low') {
+    return raw;
+  }
+  return fallback;
+}
+
+async function createOpenAiChatCompletion({
+  model,
+  messages,
+  reasoningEffort,
+}) {
+  const config = getOpenAIConfigIfAvailable();
+  if (!config) {
+    return null;
+  }
+
+  const payload = {
+    model: String(model || config.model).trim(),
+    messages: Array.isArray(messages) ? messages : [],
+    reasoning_effort: normalizeReasoningEffort(reasoningEffort, 'medium'),
+  };
+
+  const response = await fetch(`${config.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`OpenAI request failed (${response.status}): ${body}`);
+  }
+
+  return response.json();
+}
