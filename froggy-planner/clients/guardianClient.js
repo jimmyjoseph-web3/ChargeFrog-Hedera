@@ -790,3 +790,109 @@ async function mintWithGuardian(input = {}) {
     result,
   };
 }
+
+async function wipeWithGuardian(input = {}) {
+  const { policyId, blockUUID } = resolveWipeBlockConfig(input);
+  const refreshToken = await loginGuardianByRole('admin');
+  const accessToken = await exchangeAccessToken(refreshToken);
+
+  const field1 = resolveWipeField1(input);
+  if (field1) {
+    const range = parseSerialRange(field1);
+    if (range) {
+      const results = [];
+      for (let serial = range.from; serial <= range.to; serial += 1) {
+        const result = await postGuardianPolicyBlock({
+          accessToken,
+          policyId,
+          blockUUID,
+          payload: { document: { field1: String(serial) } },
+        });
+        results.push({ serial, result });
+      }
+      return {
+        mode: 'guardian_block',
+        action: 'wipe',
+        wipeMode: 'provided_range',
+        policyId,
+        blockUUID,
+        count: results.length,
+        results,
+      };
+    }
+
+    const result = await postGuardianPolicyBlock({
+      accessToken,
+      policyId,
+      blockUUID,
+      payload: { document: { field1 } },
+    });
+    return {
+      mode: 'guardian_block',
+      action: 'wipe',
+      wipeMode: 'provided_single',
+      policyId,
+      blockUUID,
+      result,
+    };
+  }
+
+  const network = resolveTestnetNetwork(input.network);
+  const tokenId = String(input.tokenId || envValue('tokenId') || '').trim();
+  const targetAccountId = String(
+    input.targetAccountId || envValue('OPERATOR_ID') || '',
+  ).trim();
+
+  if (!targetAccountId) {
+    throw new Error(
+      'targetAccountId is required for auto wipe (input.targetAccountId or OPERATOR_ID)',
+    );
+  }
+  if (!tokenId) {
+    throw new Error(
+      'tokenId is required for auto wipe (input.tokenId or tokenId)',
+    );
+  }
+
+  const allNfts = await fetchAllNftsForToken(tokenId, network);
+  const serials = toSerialListFromOwnedNfts(allNfts, targetAccountId).sort(
+    (a, b) => a - b,
+  );
+
+  if (serials.length === 0) {
+    return {
+      mode: 'guardian_block',
+      action: 'wipe',
+      wipeMode: 'auto',
+      policyId,
+      blockUUID,
+      tokenId,
+      targetAccountId,
+      ownedCount: 0,
+      message: 'No owned NFTs found to wipe',
+    };
+  }
+
+  const results = [];
+  for (const serial of serials) {
+    const result = await postGuardianPolicyBlock({
+      accessToken,
+      policyId,
+      blockUUID,
+      payload: { document: { field1: String(serial) } },
+    });
+    results.push({ serial, result });
+  }
+
+  return {
+    mode: 'guardian_block',
+    action: 'wipe',
+    wipeMode: 'auto',
+    policyId,
+    blockUUID,
+    tokenId,
+    targetAccountId,
+    ownedCount: serials.length,
+    results,
+  };
+}
