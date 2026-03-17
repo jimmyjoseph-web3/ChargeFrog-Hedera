@@ -29,3 +29,70 @@ function extractStationIdFromMessage(message) {
   const fallback = String(message || '').match(/\b(\d+)\b/);
   return fallback && fallback[1] ? parseStationId(fallback[1]) : null;
 }
+
+function stripChargeFrogStationPrefix(value) {
+  return String(value || '')
+    .replace(/^ChargeFrog Station\s*-\s*/i, '')
+    .trim();
+}
+
+function extractStationNameFromMessage(message) {
+  const raw = String(message || '').trim();
+  if (!raw) return null;
+
+  const quoted = raw.match(/["“](.+?)["”]/);
+  if (quoted && quoted[1]) {
+    return stripChargeFrogStationPrefix(quoted[1]);
+  }
+
+  const explicit = raw.match(
+    /ChargeFrog(?:\s+Station)?\s*-\s*([A-Za-z0-9 .,'&()/-]+)/i,
+  );
+  if (explicit && explicit[1]) {
+    return stripChargeFrogStationPrefix(explicit[1]);
+  }
+
+  const trailing = raw.match(
+    /\bfor\s+([A-Za-z0-9 .,'&()/-]{3,})$/i,
+  );
+  if (trailing && trailing[1]) {
+    return stripChargeFrogStationPrefix(trailing[1]);
+  }
+
+  return null;
+}
+
+function findBestStationByNameHint(stations, stationNameHint) {
+  const hint = normalizeStationNameForMatch(stationNameHint);
+  if (!hint) return null;
+
+  const hintTokens = hint.split(' ').filter((token) => token.length > 1);
+  let best = null;
+
+  for (const station of Array.isArray(stations) ? stations : []) {
+    const name = normalizeStationNameForMatch(station?.stationName || '');
+    if (!name) continue;
+
+    let score = 0;
+    if (name === hint) {
+      score = 100;
+    } else if (name.includes(hint) || hint.includes(name)) {
+      score = 80;
+    } else if (hintTokens.length > 0) {
+      const nameTokens = new Set(
+        name.split(' ').filter((token) => token.length > 1),
+      );
+      let overlap = 0;
+      for (const token of hintTokens) {
+        if (nameTokens.has(token)) overlap += 1;
+      }
+      score = (overlap / hintTokens.length) * 70;
+    }
+
+    if (!best || score > best.score) {
+      best = { station, score };
+    }
+  }
+
+  return best && best.score >= 35 ? best.station : null;
+}
