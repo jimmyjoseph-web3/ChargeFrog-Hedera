@@ -346,3 +346,95 @@ function matchPoliciesByStationName(policies, stationName) {
     .sort((left, right) => right.score - left.score)
     .map((entry) => entry.policy);
 }
+
+function summarizePolicyRecord(policy) {
+  const config = extractPolicyConfig(policy);
+  const searchable = JSON.stringify(config || policy || {});
+  const blocks = Array.from(
+    new Set(
+      String(searchable).match(
+        /\b(interfaceContainerBlock|requestVcDocumentBlock|retirementDocumentBlock|wipeTokenBlock|tokenActionBlock|mintBlock)\b/g,
+      ) || [],
+    ),
+  );
+
+  const tracks = Array.from(
+    new Set(
+      String(searchable).match(
+        /\b(station_id|hedera_id|charging_tx_hash|carbon_offset_grams|timestamp|range)\b/g,
+      ) || [],
+    ),
+  );
+
+  return {
+    policyId: extractPolicyId(policy),
+    name: firstNonEmpty([policy?.name]),
+    description: firstNonEmpty([policy?.description]),
+    status: firstNonEmpty([policy?.status]),
+    topicId: extractPolicyTopicId(policy),
+    policyTag: firstNonEmpty([policy?.policyTag]),
+    version: firstNonEmpty([policy?.version]),
+    owner: firstNonEmpty([policy?.owner, policy?.creator]),
+    categories: Array.isArray(policy?.categories)
+      ? policy.categories.length
+      : 0,
+    topicDescription: firstNonEmpty([policy?.topicDescription]),
+    applicabilityConditions: firstNonEmpty([policy?.applicabilityConditions]),
+    tokenId: findFirstStringByKeys(policy, ['tokenId']),
+    blockTypes: blocks,
+    trackedFields: tracks,
+    hasPresetSchema: Boolean(
+      policy?.presetSchema || findFirstStringByKeys(config, ['presetSchema']),
+    ),
+    hasSchema: Boolean(
+      policy?.schema || findFirstStringByKeys(config, ['schema']),
+    ),
+  };
+}
+
+async function loadDetailedPolicies(policies) {
+  const detailed = [];
+  for (const policy of Array.isArray(policies) ? policies : []) {
+    const policyId = extractPolicyId(policy);
+    if (!policyId) {
+      detailed.push(policy);
+      continue;
+    }
+    try {
+      const response = await guardianTools.getPolicyById({ policyId });
+      const fullPolicy = unwrapResult(response);
+      detailed.push(isPlainObject(fullPolicy) ? fullPolicy : policy);
+    } catch (_error) {
+      detailed.push(policy);
+    }
+  }
+  return detailed;
+}
+
+function buildDeterministicPolicyReply(stationName, policySummaries) {
+  const lines = [
+    `I found ${policySummaries.length} Guardian polic${policySummaries.length === 1 ? 'y' : 'ies'} for ${stationName}.`,
+  ];
+
+  for (const policy of policySummaries) {
+    const purpose = /wipe/i.test(String(policy.name || ''))
+      ? 'It governs station-specific wipe or retirement-style token operations.'
+      : /carbon|offset/i.test(String(policy.name || ''))
+        ? 'It governs station-specific carbon offset verification and reporting.'
+        : 'It governs a station-specific Guardian workflow.';
+    const abilities = policy.blockTypes.length
+      ? ` Its configured flow uses ${policy.blockTypes.join(', ')}.`
+      : '';
+    const tracking = policy.trackedFields.length
+      ? ` It tracks ${policy.trackedFields.join(', ')}.`
+      : '';
+    const bindings = `${
+      policy.topicId ? ` It is linked to topic ${policy.topicId}.` : ''
+    }${policy.tokenId ? ` It references token ${policy.tokenId}.` : ''}`;
+    lines.push(
+      `${policy.name || 'Unnamed policy'} is currently ${policy.status || 'unknown'}. It applies to ${stationName}. ${purpose}${abilities}${tracking}${bindings}`,
+    );
+  }
+
+  return lines.join(' ');
+}
