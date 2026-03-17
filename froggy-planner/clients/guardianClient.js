@@ -896,3 +896,42 @@ async function wipeWithGuardian(input = {}) {
     results,
   };
 }
+
+function createHederaClient(network) {
+  if (network !== TESTNET_NETWORK) {
+    throw new Error('Guardian is configured for testnet only');
+  }
+  return Client.forTestnet();
+}
+
+function parseHederaPrivateKey(rawKey) {
+  const normalized = normalizePrivateKey(rawKey);
+  if (!normalized) {
+    throw new Error(
+      'privateKey is required (input.privateKey or OPERATOR_KEY)',
+    );
+  }
+
+  const hex = normalized.startsWith('0x') ? normalized.slice(2) : normalized;
+  if (/^[a-fA-F0-9]{64}$/.test(hex)) {
+    try {
+      return PrivateKey.fromStringECDSA(hex);
+    } catch (_error) {
+      // Try next parser.
+    }
+    if (typeof PrivateKey.fromStringED25519 === 'function') {
+      try {
+        return PrivateKey.fromStringED25519(hex);
+      } catch (_error) {
+        // Try next parser.
+      }
+    }
+    try {
+      return PrivateKey.fromBytesED25519(Buffer.from(hex, 'hex'));
+    } catch (_error) {
+      // Fall through to generic parser.
+    }
+  }
+
+  return PrivateKey.fromString(normalized);
+}
