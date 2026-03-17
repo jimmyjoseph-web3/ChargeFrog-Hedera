@@ -720,3 +720,20 @@ async function fetchAllNftsForToken(tokenId, network) {
 
   return results;
 }
+
+function resolveWipeField1(input = {}) {
+  const payload =
+    input.payload && typeof input.payload === 'object'
+      ? input.payload
+      : derivePayloadFromInput(input, [
+          'policyId',
+          'blockUUID',
+          'tokenId',
+          'targetAccountId',
+          'network',
+        ]);
+  const document = toObject(payload.document, {});
+  const field1 = document.field1;
+  if (field1 === undefined || field1 === null) return '';
+  return String(field1).trim();
+}
