@@ -540,3 +540,83 @@ async function runGuardianPolicySummarizerAgent(input = {}) {
     policySummaries,
   };
 }
+
+async function runGuardianPolicyCreatorAgent(input = {}) {
+  return runGuardianAdminWorkflow(input);
+}
+
+async function runGuardianChatAgent(input = {}) {
+  const allowedKeys = new Set(['message']);
+  const extraKeys = Object.keys(input || {}).filter(
+    (key) => !allowedKeys.has(key),
+  );
+  if (extraKeys.length > 0) {
+    throw new Error(
+      `Unsupported fields for /api/agent/froggy-guardian: ${extraKeys.join(', ')}. Allowed fields: message`,
+    );
+  }
+
+  const message = String(input.message || '').trim();
+  if (!message) {
+    throw new Error('message is required');
+  }
+
+  if (isGuardianAdminIntent(message)) {
+    return callGuardianWorkerAgent({
+      endpointPath: GUARDIAN_WORKER_ENDPOINTS.policyCreator,
+      action: 'a2a:guardian_policy_creator',
+      correlationId: null,
+      payload: { message },
+    });
+  }
+
+  const intentAnalysis = await classifyGuardianIntent(message);
+  const stationName = normalizeStationName(intentAnalysis.stationName);
+
+  if (intentAnalysis.intent !== INTENTS.POLICY_ENQUIRY) {
+    return {
+      intent: intentAnalysis.intent,
+      stationName: stationName || null,
+      blocked: true,
+      summary: renderGuardianReply('chatGeneralBlockedSummary'),
+      reply: renderGuardianReply('chatGeneralBlockedReply'),
+    };
+  }
+
+  if (!stationName) {
+    return {
+      intent: intentAnalysis.intent,
+      stationName: null,
+      blocked: true,
+      summary: renderGuardianReply('chatMissingStationSummary'),
+      reply: renderGuardianReply('chatMissingStationReply'),
+    };
+  }
+  if (intentAnalysis.intent === INTENTS.POLICY_ENQUIRY) {
+    return callGuardianWorkerAgent({
+      endpointPath: GUARDIAN_WORKER_ENDPOINTS.policySummarizer,
+      action: 'a2a:guardian_policy_summarizer',
+      correlationId: null,
+      payload: {
+        stationName,
+        intent: intentAnalysis.intent,
+      },
+    });
+  }
+}
+
+const guardianChatAgent = {
+  name: 'guardian_chat_agent',
+  version: '1.0.0',
+  description: 'Guardian chat agent for per-station policy enquiries.',
+  intents: Object.values(INTENTS),
+  run: runGuardianChatAgent,
+};
+
+module.exports = {
+  INTENTS,
+  guardianChatAgent,
+  runGuardianPolicySummarizerAgent,
+  runGuardianPolicyCreatorAgent,
+  runGuardianChatAgent,
+};
