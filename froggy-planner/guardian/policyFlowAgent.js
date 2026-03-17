@@ -101,3 +101,60 @@ function extractPolicyConfig(policy) {
   }
   return null;
 }
+
+function normalizePolicyListResponse(response) {
+  const payload = unwrapResult(response);
+  if (Array.isArray(payload)) return payload;
+  if (isPlainObject(payload) && Array.isArray(payload.policies))
+    return payload.policies;
+  if (isPlainObject(payload) && Array.isArray(payload.data))
+    return payload.data;
+  return [];
+}
+
+function normalizeSchemaListResponse(response) {
+  const payload = unwrapResult(response);
+  if (Array.isArray(payload)) return payload;
+  if (isPlainObject(payload) && Array.isArray(payload.schemas))
+    return payload.schemas;
+  if (isPlainObject(payload) && Array.isArray(payload.data))
+    return payload.data;
+  return [];
+}
+
+function buildPolicyTag() {
+  const randomizedTimestamp =
+    Date.now() + Math.floor(Math.random() * 1_000_000);
+  return `Tag_${randomizedTimestamp}`;
+}
+
+function sanitizePolicyConfig(value, state, path = []) {
+  if (Array.isArray(value)) {
+    return value.map((item, index) =>
+      sanitizePolicyConfig(item, state, path.concat(index)),
+    );
+  }
+
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const output = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (IDENTIFIER_KEYS_TO_REMOVE.has(key)) {
+      continue;
+    }
+    if (SCHEMA_REFERENCE_KEYS.has(key)) {
+      state.schemaReferencePaths.push(path.concat(key));
+      continue;
+    }
+    if (key === 'tokenId') {
+      const tokenId = DEFAULT_GUARDIAN_TOKEN_ID;
+      state.tokenIds.add(tokenId);
+      output[key] = tokenId;
+      continue;
+    }
+    output[key] = sanitizePolicyConfig(item, state, path.concat(key));
+  }
+  return output;
+}
