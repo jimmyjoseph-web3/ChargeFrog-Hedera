@@ -510,3 +510,37 @@ async function listSchemasByTopicIdWithGuardian(input = {}) {
     schemas,
   };
 }
+
+async function updatePolicyByIdWithGuardian(input = {}) {
+  const policyId = String(input.policyId || '').trim();
+  if (!policyId) {
+    throw new Error('policyId is required');
+  }
+
+  const payload =
+    input.payload && typeof input.payload === 'object'
+      ? input.payload
+      : derivePayloadFromInput(input, ['policyId']);
+  if (
+    !payload ||
+    typeof payload !== 'object' ||
+    Object.keys(payload).length === 0
+  ) {
+    throw new Error('Policy update payload is required');
+  }
+
+  const refreshToken = await loginGuardianByRole('admin');
+  const accessToken = await exchangeAccessToken(refreshToken);
+  const result = await putGuardianWithAccessToken(
+    `/policies/${encodeURIComponent(policyId)}`,
+    payload,
+    accessToken,
+  );
+
+  return {
+    mode: 'guardian_api',
+    action: 'update_policy',
+    policyId,
+    result,
+  };
+}
