@@ -361,3 +361,147 @@ function toTimestamp(value) {
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+function collectDraftPolicyIds(policies) {
+  const ids = new Set();
+  for (const item of Array.isArray(policies) ? policies : []) {
+    if (extractPolicyStatus(item) !== 'DRAFT') continue;
+    const policyId = extractPolicyId(item);
+    if (policyId) {
+      ids.add(policyId);
+    }
+  }
+  return ids;
+}
+
+function findDraftPolicyRecord(
+  policies,
+  expectedName,
+  excludedPolicyIds = null,
+  previousDraftPolicyIds = null,
+) {
+  const excluded =
+    excludedPolicyIds instanceof Set ? excludedPolicyIds : new Set();
+  const previousDrafts =
+    previousDraftPolicyIds instanceof Set ? previousDraftPolicyIds : new Set();
+  const drafts = policies.filter((item) => {
+    if (extractPolicyStatus(item) !== 'DRAFT') return false;
+    const policyId = extractPolicyId(item);
+    if (!policyId) return false;
+    if (excluded.has(policyId)) return false;
+    if (previousDrafts.has(policyId)) return false;
+    return true;
+  });
+  if (drafts.length === 0) {
+    throw new Error('No draft policy found after policy creation');
+  }
+
+  if (expectedName) {
+    const byName = drafts
+      .filter((item) => extractPolicyName(item) === expectedName)
+      .sort(
+        (a, b) =>
+          toTimestamp(b.updateDate || b.createDate) -
+          toTimestamp(a.updateDate || a.createDate),
+      );
+    if (byName.length > 0) return byName[0];
+  }
+
+  if (drafts.length === 1) {
+    return drafts[0];
+  }
+
+  throw new Error(
+    `Multiple draft policies found (${drafts.length}). Unable to safely resolve the new draft policy.`,
+  );
+}
+
+async function resolveDraftPolicy(
+  createdPolicyName,
+  excludedPolicyIds = null,
+  previousDraftPolicyIds = null,
+) {
+  const initialDelayMs = 2000;
+  const intervalMs = 1000;
+  let attempts = 0;
+
+  if (initialDelayMs > 0) {
+    await sleep(initialDelayMs);
+  }
+
+  while (true) {
+    attempts += 1;
+    try {
+      const listResponse = await guardianTools.listPolicies({
+        pageSize: 100,
+        maxPages: 50,
+      });
+      const policies = normalizePolicyListResponse(listResponse);
+      const draftPolicy = findDraftPolicyRecord(
+        policies,
+        createdPolicyName || '',
+        excludedPolicyIds,
+        previousDraftPolicyIds,
+      );
+
+      const policyId = extractPolicyId(draftPolicy);
+      const topicId = extractPolicyTopicId(draftPolicy);
+
+      if (!policyId) {
+        throw new Error(
+          'Unable to resolve draft policyId from /api/guardian/policies',
+        );
+      }
+      if (!topicId) {
+        throw new Error(
+          'Unable to resolve draft topicId from /api/guardian/policies',
+        );
+      }
+
+      return {
+        policyId,
+        topicId,
+        status: extractPolicyStatus(draftPolicy),
+      };
+    } catch (error) {
+      const message = String(
+        error && error.message ? error.message : '',
+      ).toLowerCase();
+      const isNoDraftYet = message.includes(
+        'no draft policy found after policy creation',
+      );
+      if (!isNoDraftYet) {
+        throw error;
+      }
+      await sleep(intervalMs);
+    }
+  }
+}
+
+async function resolveCreatedSchemaUri(topicId, schemaName) {
+  const schemaListResponse = await guardianTools.listSchemasByTopicId({
+    topicId,
+    pageSize: 100,
+    maxPages: 50,
+  });
+  const schemas = normalizeSchemaListResponse(schemaListResponse);
+  const named = schemas.filter(
+    (schema) => String(schema?.name || '').trim() === schemaName,
+  );
+  const pool = named.length > 0 ? named : schemas;
+  if (pool.length === 0) {
+    throw new Error(`No schemas found for topic ${topicId}`);
+  }
+  const sorted = pool
+    .slice()
+    .sort(
+      (a, b) =>
+        toTimestamp(b.updateDate || b.createDate) -
+        toTimestamp(a.updateDate || a.createDate),
+    );
+  const schemaUri = getSchemaUri(sorted[0]);
+  if (!schemaUri) {
+    throw new Error(`Unable to resolve schema URI for topic ${topicId}`);
+  }
+  return schemaUri;
+}
