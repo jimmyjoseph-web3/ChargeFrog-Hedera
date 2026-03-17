@@ -766,3 +766,27 @@ function toSerialListFromOwnedNfts(nfts, accountId) {
     .filter((value) => Number.isFinite(value) && value > 0)
     .map((value) => Math.trunc(value));
 }
+
+async function mintWithGuardian(input = {}) {
+  const payload =
+    input.payload && typeof input.payload === 'object'
+      ? input.payload
+      : derivePayloadFromInput(input, ['policyId', 'blockUUID']);
+  const { policyId, blockUUID } = resolveMintBlockConfig(input);
+  const refreshToken = await loginGuardianByRole('treasury');
+  const accessToken = await exchangeAccessToken(refreshToken);
+  const result = await postGuardianPolicyBlock({
+    accessToken,
+    policyId,
+    blockUUID,
+    payload,
+  });
+
+  return {
+    mode: 'guardian_block',
+    action: 'mint',
+    policyId,
+    blockUUID,
+    result,
+  };
+}
