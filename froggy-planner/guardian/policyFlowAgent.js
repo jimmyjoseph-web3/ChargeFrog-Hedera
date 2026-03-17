@@ -294,3 +294,70 @@ function parseSchemaDocument(schemaItem) {
   }
   throw new Error('Schema item does not include a valid document');
 }
+
+function selectBestSourceSchema(schemas, kind) {
+  if (!Array.isArray(schemas) || schemas.length === 0) {
+    throw new Error('No source schemas found for template topic');
+  }
+  let best = null;
+  let bestScore = -1;
+
+  for (const schema of schemas) {
+    const text =
+      `${schema?.name || ''} ${schema?.description || ''}`.toLowerCase();
+    let score = 1;
+    if (kind === 'carbon') {
+      if (text.includes('carbon')) score += 4;
+      if (text.includes('offset')) score += 3;
+    }
+    if (kind === 'wipe') {
+      if (text.includes('wipe')) score += 4;
+      if (text.includes('token')) score += 2;
+    }
+    if (schema?.document) score += 1;
+
+    if (score > bestScore) {
+      best = schema;
+      bestScore = score;
+    }
+  }
+
+  return best;
+}
+
+function buildSchemaCreatePayload(sourceSchema, schemaName) {
+  const schemaDoc = parseSchemaDocument(sourceSchema);
+  return {
+    name: schemaName,
+    entity: String(sourceSchema?.entity || 'VC'),
+    properties: isPlainObject(schemaDoc.properties) ? schemaDoc.properties : {},
+    required: Array.isArray(schemaDoc.required) ? schemaDoc.required : [],
+    additionalProperties:
+      schemaDoc.additionalProperties === undefined
+        ? false
+        : Boolean(schemaDoc.additionalProperties),
+    $defs: isPlainObject(schemaDoc.$defs) ? schemaDoc.$defs : {},
+  };
+}
+
+function getSchemaUri(schemaItem) {
+  if (!isPlainObject(schemaItem)) return null;
+  const uri = firstNonEmpty([
+    schemaItem.uri,
+    schemaItem.iri,
+    schemaItem.documentURL,
+    schemaItem.contextURL,
+  ]);
+  if (uri) return uri;
+  const uuid = firstNonEmpty([schemaItem.uuid]);
+  return uuid ? `schema:${uuid}` : null;
+}
+
+function toTimestamp(value) {
+  const parsed = Number(new Date(value).getTime());
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
