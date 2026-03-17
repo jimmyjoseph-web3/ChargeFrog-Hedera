@@ -544,3 +544,57 @@ async function updatePolicyByIdWithGuardian(input = {}) {
     result,
   };
 }
+
+async function publishPolicyByIdWithGuardian(input = {}) {
+  const policyId = String(input.policyId || '').trim();
+  if (!policyId) {
+    throw new Error('policyId is required');
+  }
+  const policyVersion = String(input.policyVersion || '1.0.0').trim();
+  if (!policyVersion) {
+    throw new Error('policyVersion is required');
+  }
+
+  const refreshToken = await loginGuardianByRole('admin');
+  const accessToken = await exchangeAccessToken(refreshToken);
+  const result = await putGuardianWithAccessToken(
+    `/policies/${encodeURIComponent(policyId)}/publish`,
+    { policyVersion },
+    accessToken,
+  );
+
+  return {
+    mode: 'guardian_api',
+    action: 'publish_policy',
+    policyId,
+    policyVersion,
+    result,
+  };
+}
+
+async function publishPolicyByIdWithGuardianTreasury(input = {}) {
+  const policyId = String(input.policyId || '').trim();
+  if (!policyId) {
+    throw new Error('policyId is required');
+  }
+  const policyVersion = String(input.policyVersion || '1.0.0').trim();
+  if (!policyVersion) {
+    throw new Error('policyVersion is required');
+  }
+
+  const refreshToken = await loginGuardianByRole('treasury');
+  const accessToken = await exchangeAccessToken(refreshToken);
+  const result = await putGuardianWithAccessToken(
+    `/policies/${encodeURIComponent(policyId)}/publish`,
+    { policyVersion },
+    accessToken,
+  );
+
+  return {
+    mode: 'guardian_api',
+    action: 'publish_policy_treasury',
+    policyId,
+    policyVersion,
+    result,
+  };
+}
