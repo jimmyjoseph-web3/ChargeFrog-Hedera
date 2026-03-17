@@ -634,3 +634,20 @@ async function createSchemaWithGuardian(input = {}) {
     result,
   };
 }
+
+function resolveMintBlockConfig(input = {}) {
+  const policyId = String(
+    input.policyId || envValue('mintTokenRequestVCBlock_policyID') || '',
+  ).trim();
+  const blockUUID = String(
+    input.blockUUID || envValue('mintTokenRequestVCBlock_blockUUID') || '',
+  ).trim();
+
+  if (!policyId || !blockUUID) {
+    throw new Error(
+      'Missing mint block config. Set mintTokenRequestVCBlock_policyID + mintTokenRequestVCBlock_blockUUID.',
+    );
+  }
+
+  return { policyId, blockUUID };
+}
