@@ -1,0 +1,66 @@
+const { guardianTools } = require('./tools');
+
+const DEFAULT_CARBON_TEMPLATE_POLICY_ID = '6917fef5e88fa758ecc72e1b';
+const DEFAULT_WIPE_TEMPLATE_POLICY_ID = '69186a11e88fa758ecc73127';
+const DEFAULT_GUARDIAN_TOKEN_ID = '0.0.7264176';
+const DEFAULT_POLICY_VERSION = '1.0.0';
+
+const DEFAULT_POLICY_CATEGORIES = [
+  '6917d97da17a3035b283a89e',
+  '6917d97da17a3035b283a887',
+  '6917d97da17a3035b283a889',
+  '6917d97da17a3035b283a896',
+  '6917d97da17a3035b283a89a',
+];
+
+const IDENTIFIER_KEYS_TO_REMOVE = new Set([
+  'policyId',
+  '_id',
+  'uuid',
+  'createDate',
+  'updateDate',
+  'hash',
+  'hashMap',
+  'hashMapFileId',
+  'messageId',
+  'configFileId',
+  'instanceTopicId',
+  'synchronizationTopicId',
+  'commentsTopicId',
+]);
+
+const SCHEMA_REFERENCE_KEYS = new Set(['schema', 'presetSchema']);
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function deepClone(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => deepClone(item));
+  }
+  if (!isPlainObject(value)) {
+    return value;
+  }
+  const out = {};
+  for (const [key, item] of Object.entries(value)) {
+    out[key] = deepClone(item);
+  }
+  return out;
+}
+
+function unwrapResult(value) {
+  if (isPlainObject(value) && isPlainObject(value.result)) {
+    return value.result;
+  }
+  return value;
+}
+
+function firstNonEmpty(values) {
+  for (const value of values) {
+    if (value === undefined || value === null) continue;
+    const normalized = String(value).trim();
+    if (normalized) return normalized;
+  }
+  return null;
+}
