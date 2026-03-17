@@ -551,3 +551,372 @@ function buildPolicyUpdatePayload(
     config: updatedConfig,
   };
 }
+
+function selectBestExistingPolicyByName(policies, policyName) {
+  const matches = policies.filter(
+    (item) => extractPolicyName(item) === policyName,
+  );
+  if (matches.length === 0) {
+    return { policy: null, duplicateCount: 0 };
+  }
+
+  function statusWeight(status) {
+    if (status === 'PUBLISHED') return 3;
+    if (status === 'DRAFT') return 2;
+    return 1;
+  }
+
+  const sorted = matches.slice().sort((a, b) => {
+    const statusCompare =
+      statusWeight(extractPolicyStatus(b)) -
+      statusWeight(extractPolicyStatus(a));
+    if (statusCompare !== 0) return statusCompare;
+    return (
+      toTimestamp(b.updateDate || b.createDate) -
+      toTimestamp(a.updateDate || a.createDate)
+    );
+  });
+
+  return {
+    policy: sorted[0],
+    duplicateCount: matches.length,
+  };
+}
+
+async function runSinglePolicyFlow(options) {
+  const {
+    stationName,
+    templatePolicyId,
+    policyNameSuffix,
+    schemaNameSuffix,
+    publishRole,
+    policyVersion,
+    kind,
+    usedPolicyIds,
+    copiedTemplatePolicyIds,
+  } = options;
+  const usedIds = usedPolicyIds instanceof Set ? usedPolicyIds : new Set();
+  const copiedTemplateIds =
+    copiedTemplatePolicyIds instanceof Set
+      ? copiedTemplatePolicyIds
+      : new Set();
+
+  if (copiedTemplateIds.has(templatePolicyId)) {
+    throw new Error(
+      `Template policy ${templatePolicyId} already processed in this run; refusing duplicate copy`,
+    );
+  }
+  copiedTemplateIds.add(templatePolicyId);
+
+  const sourcePolicyResponse = await guardianTools.getPolicyById({
+    policyId: templatePolicyId,
+  });
+  const sourcePolicy = unwrapResult(sourcePolicyResponse);
+  const sourceConfig = extractPolicyConfig(sourcePolicy);
+  const sourceTopicId = extractPolicyTopicId(sourcePolicy);
+
+  if (!sourceConfig) {
+    throw new Error(
+      `Template policy ${templatePolicyId} did not include config`,
+    );
+  }
+  if (!sourceTopicId) {
+    throw new Error(
+      `Template policy ${templatePolicyId} did not include topicId`,
+    );
+  }
+
+  const sanitizeState = {
+    schemaReferencePaths: [],
+    tokenIds: new Set(),
+  };
+  const sanitizedConfig = sanitizePolicyConfig(sourceConfig, sanitizeState, []);
+  const tokenId =
+    sanitizeState.tokenIds.values().next().value || DEFAULT_GUARDIAN_TOKEN_ID;
+
+  const createdPolicyName = `ChargeFrog Policy for ${stationName} - ${policyNameSuffix}`;
+  const existingPoliciesResponse = await guardianTools.listPolicies({
+    pageSize: 100,
+    maxPages: 50,
+  });
+  const existingPolicies = normalizePolicyListResponse(
+    existingPoliciesResponse,
+  );
+  const stationPolicyPrefix = `ChargeFrog Policy for ${stationName} -`;
+  const stationNamedPolicies = existingPolicies.filter((item) =>
+    extractPolicyName(item).startsWith(stationPolicyPrefix),
+  );
+  if (stationNamedPolicies.length >= 2) {
+    const hasTargetPolicy = stationNamedPolicies.some(
+      (item) => extractPolicyName(item) === createdPolicyName,
+    );
+    if (!hasTargetPolicy) {
+      throw new Error(
+        `Refusing to create additional policy. Station "${stationName}" already has ${stationNamedPolicies.length} named policies.`,
+      );
+    }
+  }
+
+  const unnamedDraftPolicies = existingPolicies.filter(
+    (item) => extractPolicyStatus(item) === 'DRAFT' && !extractPolicyName(item),
+  );
+  if (unnamedDraftPolicies.length > 0) {
+    throw new Error(
+      `Found ${unnamedDraftPolicies.length} unnamed draft policy/policies. Resolve or remove them before creating new policies.`,
+    );
+  }
+
+  const { policy: existingPolicyByName, duplicateCount } =
+    selectBestExistingPolicyByName(existingPolicies, createdPolicyName);
+  if (duplicateCount > 1) {
+    throw new Error(
+      `Found ${duplicateCount} policies with same name "${createdPolicyName}". Resolve duplicates first.`,
+    );
+  }
+  if (existingPolicyByName) {
+    const existingPolicyId = extractPolicyId(existingPolicyByName);
+    const existingStatus =
+      extractPolicyStatus(existingPolicyByName) || 'UNKNOWN';
+    throw new Error(
+      `Policy "${createdPolicyName}" already exists (policyId=${existingPolicyId || 'n/a'}, status=${existingStatus}). Refusing duplicate creation.`,
+    );
+  }
+
+  const createPolicyPayload = buildPolicyCreatePayload(
+    createdPolicyName,
+    sanitizedConfig,
+  );
+  const previousDraftPolicyIds = collectDraftPolicyIds(existingPolicies);
+  await guardianTools.createPolicy({ payload: createPolicyPayload });
+  const draftPolicy = await resolveDraftPolicy(
+    createdPolicyName,
+    usedIds,
+    previousDraftPolicyIds,
+  );
+  if (usedIds.has(draftPolicy.policyId)) {
+    throw new Error(
+      `Resolved draft policy ${draftPolicy.policyId} is already used in this run; refusing duplicate reuse`,
+    );
+  }
+
+  // Persist canonical metadata+config on resolved draft policy.
+  await guardianTools.updatePolicyById({
+    policyId: draftPolicy.policyId,
+    payload: createPolicyPayload,
+  });
+
+  const sourceSchemasResponse = await guardianTools.listSchemasByTopicId({
+    topicId: sourceTopicId,
+    pageSize: 100,
+    maxPages: 50,
+  });
+  const sourceSchemas = normalizeSchemaListResponse(sourceSchemasResponse);
+  const selectedSourceSchema = selectBestSourceSchema(sourceSchemas, kind);
+  const sourceSchemaName =
+    String(selectedSourceSchema?.name || '').trim() || null;
+
+  const createdSchemaName = `ChargeFrog Schema for ${stationName} - ${schemaNameSuffix}`;
+  const schemaCreatePayload = buildSchemaCreatePayload(
+    selectedSourceSchema,
+    createdSchemaName,
+  );
+  await guardianTools.pushSchemaByTopic({
+    topicId: draftPolicy.topicId,
+    payload: schemaCreatePayload,
+  });
+
+  const schemaUri = await resolveCreatedSchemaUri(
+    draftPolicy.topicId,
+    createdSchemaName,
+  );
+
+  const createdPolicyResponse = await guardianTools.getPolicyById({
+    policyId: draftPolicy.policyId,
+  });
+  const createdPolicy = unwrapResult(createdPolicyResponse);
+  const createdPolicyConfig = extractPolicyConfig(createdPolicy);
+  if (!createdPolicyConfig) {
+    throw new Error(
+      `Created policy ${draftPolicy.policyId} did not include config`,
+    );
+  }
+  const updatedConfig = applySchemaUriToConfig(
+    createdPolicyConfig,
+    sanitizeState.schemaReferencePaths,
+    schemaUri,
+  );
+  const bindingEnforcedConfig = forceSchemaBindings(updatedConfig, schemaUri);
+  const updatePayload = buildPolicyUpdatePayload(
+    createdPolicyName,
+    bindingEnforcedConfig,
+    createdPolicy,
+  );
+
+  await guardianTools.updatePolicyById({
+    policyId: draftPolicy.policyId,
+    payload: updatePayload,
+  });
+
+  // Verify schema + presetSchema are attached; repair once if Guardian drops either field.
+  const verifyPolicyResponse = await guardianTools.getPolicyById({
+    policyId: draftPolicy.policyId,
+  });
+  const verifyPolicy = unwrapResult(verifyPolicyResponse);
+  const verifyConfig = extractPolicyConfig(verifyPolicy);
+  const bindingStatus = findSchemaBindingStatus(verifyConfig, schemaUri);
+  if (!bindingStatus.hasSchema || !bindingStatus.hasPresetSchema) {
+    const repairedConfig = forceSchemaBindings(
+      verifyConfig || bindingEnforcedConfig,
+      schemaUri,
+    );
+    const repairPayload = buildPolicyUpdatePayload(
+      createdPolicyName,
+      repairedConfig,
+      verifyPolicy,
+    );
+    await guardianTools.updatePolicyById({
+      policyId: draftPolicy.policyId,
+      payload: repairPayload,
+    });
+
+    const verifyPolicyResponse2 = await guardianTools.getPolicyById({
+      policyId: draftPolicy.policyId,
+    });
+    const verifyPolicy2 = unwrapResult(verifyPolicyResponse2);
+    const verifyConfig2 = extractPolicyConfig(verifyPolicy2);
+    const bindingStatus2 = findSchemaBindingStatus(verifyConfig2, schemaUri);
+    if (!bindingStatus2.hasSchema || !bindingStatus2.hasPresetSchema) {
+      throw new Error(
+        `Failed to attach both schema and presetSchema for policy ${draftPolicy.policyId}`,
+      );
+    }
+  }
+
+  if (publishRole === 'treasury') {
+    await guardianTools.publishPolicyByIdTreasury({
+      policyId: draftPolicy.policyId,
+      policyVersion,
+    });
+  } else {
+    await guardianTools.publishPolicyById({
+      policyId: draftPolicy.policyId,
+      policyVersion,
+    });
+  }
+
+  usedIds.add(draftPolicy.policyId);
+
+  return {
+    templatePolicyId,
+    sourceTopicId,
+    sourceSchemaName,
+    tokenId,
+    policyId: draftPolicy.policyId,
+    topicId: draftPolicy.topicId,
+    policyName: createdPolicyName,
+    schemaName: createdSchemaName,
+    schemaUri,
+    policyVersion,
+    publishRole,
+    duplicateCount,
+    created: true,
+  };
+}
+
+async function runGuardianPolicyStationFlow(input = {}) {
+  const stationName = String(
+    input.stationName || input.station_name || input.name || '',
+  ).trim();
+  if (!stationName) {
+    throw new Error('stationName is required (or station_name/name)');
+  }
+
+  const requestedCarbonTemplatePolicyId = String(
+    input.carbonTemplatePolicyId || '',
+  ).trim();
+  const requestedWipeTemplatePolicyId = String(
+    input.wipeTemplatePolicyId || '',
+  ).trim();
+  if (
+    requestedCarbonTemplatePolicyId &&
+    requestedCarbonTemplatePolicyId !== DEFAULT_CARBON_TEMPLATE_POLICY_ID
+  ) {
+    throw new Error(
+      `carbonTemplatePolicyId must be ${DEFAULT_CARBON_TEMPLATE_POLICY_ID}`,
+    );
+  }
+  if (
+    requestedWipeTemplatePolicyId &&
+    requestedWipeTemplatePolicyId !== DEFAULT_WIPE_TEMPLATE_POLICY_ID
+  ) {
+    throw new Error(
+      `wipeTemplatePolicyId must be ${DEFAULT_WIPE_TEMPLATE_POLICY_ID}`,
+    );
+  }
+
+  const carbonTemplatePolicyId = DEFAULT_CARBON_TEMPLATE_POLICY_ID;
+  const wipeTemplatePolicyId = DEFAULT_WIPE_TEMPLATE_POLICY_ID;
+  const policyVersion = String(
+    input.policyVersion || DEFAULT_POLICY_VERSION,
+  ).trim();
+  if (!carbonTemplatePolicyId) {
+    throw new Error('carbonTemplatePolicyId is required');
+  }
+  if (!wipeTemplatePolicyId) {
+    throw new Error('wipeTemplatePolicyId is required');
+  }
+  if (!policyVersion) {
+    throw new Error('policyVersion is required');
+  }
+  const rawSecondPolicyDelayMs = Number(input.secondPolicyDelayMs);
+  const secondPolicyDelayMs = Number.isFinite(rawSecondPolicyDelayMs)
+    ? Math.max(0, Math.trunc(rawSecondPolicyDelayMs))
+    : 10000;
+  const usedPolicyIds = new Set();
+  const copiedTemplatePolicyIds = new Set();
+
+  const carbonOffsetPolicy = await runSinglePolicyFlow({
+    stationName,
+    templatePolicyId: carbonTemplatePolicyId,
+    policyNameSuffix: 'Carbon Offset',
+    schemaNameSuffix: 'Carbon Offset',
+    publishRole: 'admin',
+    policyVersion,
+    kind: 'carbon',
+    usedPolicyIds,
+    copiedTemplatePolicyIds,
+  });
+
+  // Guardian can lag under sequential policy operations; pause before second policy.
+  if (secondPolicyDelayMs > 0) {
+    await sleep(secondPolicyDelayMs);
+  }
+
+  const wipeTokenPolicy = await runSinglePolicyFlow({
+    stationName,
+    templatePolicyId: wipeTemplatePolicyId,
+    policyNameSuffix: 'Wipe Token',
+    schemaNameSuffix: 'Wipe Token',
+    publishRole: 'treasury',
+    policyVersion,
+    kind: 'wipe',
+    usedPolicyIds,
+    copiedTemplatePolicyIds,
+  });
+
+  return {
+    stationName,
+    policyVersion,
+    secondPolicyDelayMs,
+    templates: {
+      carbonTemplatePolicyId,
+      wipeTemplatePolicyId,
+    },
+    carbonOffsetPolicy,
+    wipeTokenPolicy,
+  };
+}
+
+module.exports = {
+  runGuardianPolicyStationFlow,
+};
