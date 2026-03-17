@@ -249,3 +249,100 @@ async function createOpenAiChatCompletion({
 
   return response.json();
 }
+
+function readCompletionText(completion) {
+  const choice = completion?.choices?.[0];
+  const content = choice?.message?.content;
+  if (Array.isArray(content)) {
+    return content
+      .map((item) =>
+        isPlainObject(item) ? item.text || '' : String(item || ''),
+      )
+      .join('')
+      .trim();
+  }
+  return String(content || '').trim();
+}
+
+async function classifyGuardianIntent(message) {
+  const trimmedMessage = String(message || '').trim();
+  const fallbackStationName = extractStationNameHeuristic(trimmedMessage);
+
+  const config = getOpenAIConfigIfAvailable();
+  if (!config) {
+    return {
+      intent:
+        /\bpolicy\b|\bpublish\b|\btag\b|\bstatus\b|\btrack\b|\bwhat\s+does\b/i.test(
+          trimmedMessage,
+        )
+          ? INTENTS.POLICY_ENQUIRY
+          : INTENTS.GENERAL,
+      stationName: fallbackStationName,
+      reason: 'heuristic_fallback',
+      source: 'heuristic',
+    };
+  }
+
+  const prompt = GUARDIAN_INTENT_CLASSIFIER_PROMPT;
+
+  try {
+    const completion = await createOpenAiChatCompletion({
+      model: config.model,
+      reasoningEffort: process.env.GUARDIAN_AGENT_REASONING_EFFORT || 'medium',
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content: trimmedMessage },
+      ],
+    });
+    const parsed = extractJsonObject(readCompletionText(completion));
+    if (parsed && typeof parsed === 'object') {
+      const intent = firstNonEmpty([parsed.intent]) || INTENTS.GENERAL;
+      const stationName = normalizeStationName(parsed.stationName);
+      return {
+        intent: Object.values(INTENTS).includes(intent)
+          ? intent
+          : INTENTS.GENERAL,
+        stationName: stationName || fallbackStationName,
+        reason: String(parsed.reason || 'llm_classification'),
+        source: 'llm',
+      };
+    }
+  } catch (_error) {
+    // Fall back below.
+  }
+
+  return {
+    intent:
+      /\bpolicy\b|\bpublish\b|\btag\b|\bstatus\b|\btrack\b|\bwhat\s+does\b/i.test(
+        trimmedMessage,
+      )
+        ? INTENTS.POLICY_ENQUIRY
+        : INTENTS.GENERAL,
+    stationName: fallbackStationName,
+    reason: 'heuristic_after_llm_fallback',
+    source: 'heuristic',
+  };
+}
+
+function scorePolicyMatch(policy, regex) {
+  const name = String(policy?.name || '');
+  const description = String(policy?.description || '');
+  let score = 0;
+  if (regex.test(name)) score += 10;
+  if (regex.test(description)) score += 3;
+  return score;
+}
+
+function matchPoliciesByStationName(policies, stationName) {
+  const regex = buildStationRegex(stationName);
+  if (!regex) return [];
+
+  return policies
+    .map((policy) => ({
+      policy,
+      score: scorePolicyMatch(policy, regex),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((left, right) => right.score - left.score)
+    .map((entry) => entry.policy);
+}
