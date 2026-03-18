@@ -139,3 +139,45 @@ function buildAgentSkill({
     outputModes,
   };
 }
+
+function buildAgentCard(baseUrl, agentKey = 'planner') {
+  const agent = resolveAgentConfig(agentKey);
+  const documentationUrl = /^https?:\/\//i.test(agent.documentationUrl || '')
+    ? agent.documentationUrl
+    : `${baseUrl}${agent.documentationUrl || '/docs'}`;
+  const serviceEndpoint = `${baseUrl}${agent.endpointPath}`;
+  return {
+    id: agent.key,
+    protocolVersion: A2A_PROTOCOL_VERSION,
+    name: agent.name,
+    description: agent.description,
+    url: serviceEndpoint,
+    serviceEndpoint,
+    endpoints: {
+      a2a: serviceEndpoint,
+    },
+    version: '1.0.0',
+    documentationUrl,
+    provider: {
+      organization: 'ChargeFrog',
+      url: baseUrl,
+    },
+    capabilities: {
+      streaming: false,
+      messageHandling: true,
+      pushNotifications: false,
+    },
+    defaultInputModes: ['text/plain', 'application/json'],
+    defaultOutputModes: ['text/plain', 'application/json'],
+    supportsAuthenticatedExtendedCard: false,
+    skills: agent.skills.map((skill) => buildAgentSkill(skill)),
+  };
+}
+
+function jsonRpcSuccess(id, result) {
+  return {
+    jsonrpc: '2.0',
+    id: id === undefined ? null : id,
+    result,
+  };
+}
