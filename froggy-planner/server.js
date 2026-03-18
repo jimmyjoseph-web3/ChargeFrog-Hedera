@@ -496,6 +496,214 @@ const server = http.createServer(async (req, res) => {
     return handleApiRequest(req, res, getBalance);
   }
 
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/guardian/mint'
+  ) {
+    return handleApiRequest(req, res, mintWithGuardian);
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/guardian/agent/create-station-policies'
+  ) {
+    return handleApiRequest(req, res, guardianAdminTools.createStationPolicies);
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/guardian/createPolicy'
+  ) {
+    return handleApiRequest(req, res, createPolicyWithGuardian);
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    /^\/api\/guardian\/schemas\/push\/[^/]+$/.test(pathname)
+  ) {
+    try {
+      const parts = pathname.split('/');
+      const topicId = decodeURIComponent(String(parts[5] || '')).trim();
+      const body = await readJsonBody(req);
+      const data = await createSchemaWithGuardian({ topicId, ...body });
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'GET' &&
+    pathname === '/api/guardian/policies'
+  ) {
+    try {
+      const pageSize = queryNumberOrUndefined(
+        requestUrl.searchParams,
+        'pageSize',
+      );
+      const maxPages = queryNumberOrUndefined(
+        requestUrl.searchParams,
+        'maxPages',
+      );
+      const data = await listPoliciesWithGuardian({ pageSize, maxPages });
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'GET' &&
+    /^\/api\/guardian\/schemas\/by-topic\/[^/]+$/.test(pathname)
+  ) {
+    try {
+      const parts = pathname.split('/');
+      const topicId = decodeURIComponent(String(parts[5] || '')).trim();
+      const pageSize = queryNumberOrUndefined(
+        requestUrl.searchParams,
+        'pageSize',
+      );
+      const maxPages = queryNumberOrUndefined(
+        requestUrl.searchParams,
+        'maxPages',
+      );
+      const data = await listSchemasByTopicIdWithGuardian({
+        topicId,
+        pageSize,
+        maxPages,
+      });
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'GET' &&
+    /^\/api\/guardian\/policies\/[^/]+$/.test(pathname)
+  ) {
+    try {
+      const policyId = decodeURIComponent(
+        String(pathname.split('/').pop() || ''),
+      ).trim();
+      const data = await getPolicyByIdWithGuardian({ policyId });
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'PUT' &&
+    /^\/api\/guardian\/policies\/[^/]+\/publish-treasury$/.test(pathname)
+  ) {
+    try {
+      const parts = pathname.split('/');
+      const policyId = decodeURIComponent(String(parts[4] || '')).trim();
+      const body = await readJsonBody(req);
+      const data = await publishPolicyByIdWithGuardianTreasury({
+        policyId,
+        ...body,
+      });
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'PUT' &&
+    /^\/api\/guardian\/policies\/[^/]+\/publish$/.test(pathname)
+  ) {
+    try {
+      const parts = pathname.split('/');
+      const policyId = decodeURIComponent(String(parts[4] || '')).trim();
+      const body = await readJsonBody(req);
+      const data = await publishPolicyByIdWithGuardian({ policyId, ...body });
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'PUT' &&
+    /^\/api\/guardian\/policies\/[^/]+$/.test(pathname)
+  ) {
+    try {
+      const policyId = decodeURIComponent(
+        String(pathname.split('/').pop() || ''),
+      ).trim();
+      const body = await readJsonBody(req);
+      const data = await updatePolicyByIdWithGuardian({ policyId, ...body });
+      return sendJson(res, 200, { ok: true, data });
+    } catch (error) {
+      const statusCode = looksLikeBadRequest(error) ? 400 : 500;
+      return sendJson(res, statusCode, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Unexpected server error',
+      });
+    }
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/guardian/wipe'
+  ) {
+    return handleApiRequest(req, res, wipeWithGuardian);
+  }
+
+  if (
+    ENABLE_TEST_API_ROUTES &&
+    req.method === 'POST' &&
+    pathname === '/api/guardian/token-associate'
+  ) {
+    return handleApiRequest(req, res, associateTokenWithHederaSdk);
+  }
+
   if (
     ENABLE_TEST_API_ROUTES &&
     req.method === 'POST' &&

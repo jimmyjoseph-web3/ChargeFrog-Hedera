@@ -564,6 +564,575 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
+            '/api/guardian/createPolicy': {
+        post: {
+          tags: ['Guardian Policies'],
+          summary: 'Create Guardian policy via URL + /policies/push',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/GuardianCreatePolicyRequest',
+                },
+                examples: {
+                  default: {
+                    value: {
+                      name: 'test',
+                      applicabilityConditions: 'test',
+                      detailsUrl: 'test',
+                      policyTag: 'Tag_17725515820794',
+                      typicalProjects: '',
+                      topicDescription: '',
+                      description: '',
+                      categories: [
+                        '6917d97da17a3035b283a89e',
+                        '6917d97da17a3035b283a887',
+                        '6917d97da17a3035b283a889',
+                        '6917d97da17a3035b283a896',
+                        '6917d97da17a3035b283a89a',
+                      ],
+                      importantParameters: {
+                        atValidation: '',
+                        monitored: '',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Policy pushed successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/guardian/agent/create-station-policies': {
+        post: {
+          tags: ['Guardian Operations'],
+          summary:
+            'Run Guardian station-policy flow agent: clone Carbon/Wipe templates, copy schema by topic, reattach schema URIs, then publish',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/GuardianPolicyFlowAgentRequest',
+                },
+                examples: {
+                  defaultRun: {
+                    value: {
+                      stationName: 'Madison Square Garden',
+                      carbonTemplatePolicyId: '6917fef5e88fa758ecc72e1b',
+                      wipeTemplatePolicyId: '69186a11e88fa758ecc73127',
+                      policyVersion: '1.0.0',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Flow completed',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/guardian/schemas/push/{topicId}': {
+        post: {
+          tags: ['Guardian Schema'],
+          summary: 'Create schema via URL + /schemas/push/{topicId}',
+          parameters: [
+            {
+              in: 'path',
+              name: 'topicId',
+              required: true,
+              schema: { type: 'string' },
+              example: '0.0.8073625',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/GuardianSchemaPushRequest',
+                },
+                examples: {
+                  requestedSchema: {
+                    value: {
+                      name: 'test',
+                      entity: 'VC',
+                      properties: {
+                        '@context': {
+                          oneOf: [
+                            { type: 'string' },
+                            { type: 'array', items: { type: 'string' } },
+                          ],
+                          readOnly: true,
+                        },
+                        type: {
+                          oneOf: [
+                            { type: 'string' },
+                            { type: 'array', items: { type: 'string' } },
+                          ],
+                          readOnly: true,
+                        },
+                        id: {
+                          type: 'string',
+                          readOnly: true,
+                        },
+                        field1: {
+                          title: 'field1',
+                          description: 'range',
+                          readOnly: false,
+                          type: 'string',
+                          $comment:
+                            '{"term":"field1","@id":"https://www.schema.org/text","availableOptions":[],"orderPosition":0}',
+                        },
+                        policyId: {
+                          title: 'Policy Id',
+                          description: 'Policy Id',
+                          readOnly: true,
+                          type: 'string',
+                          $comment:
+                            '{"term":"policyId","@id":"https://www.schema.org/text"}',
+                        },
+                        ref: {
+                          title: 'Relationships',
+                          description: 'Relationships',
+                          readOnly: true,
+                          type: 'string',
+                          $comment:
+                            '{"term":"ref","@id":"https://www.schema.org/text"}',
+                        },
+                        guardianVersion: {
+                          title: 'Guardian Version',
+                          description: 'Guardian Version',
+                          readOnly: true,
+                          type: 'string',
+                          $comment:
+                            '{"term":"guardianVersion","@id":"https://www.schema.org/text"}',
+                        },
+                      },
+                      required: ['@context', 'type', 'policyId'],
+                      additionalProperties: false,
+                      $defs: {},
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Schema created',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/guardian/policies': {
+        get: {
+          tags: ['Guardian Policies'],
+          summary:
+            'Get all Guardian policies (aggregated from paginated /policies)',
+          parameters: [
+            {
+              in: 'query',
+              name: 'pageSize',
+              required: false,
+              schema: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 200,
+                default: 100,
+              },
+              description: 'Per-page fetch size when aggregating policies.',
+            },
+            {
+              in: 'query',
+              name: 'maxPages',
+              required: false,
+              schema: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 200,
+                default: 50,
+              },
+              description: 'Safety limit for pagination loops.',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Policies retrieved',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/guardian/schemas/by-topic/{topicId}': {
+        get: {
+          tags: ['Guardian Schema'],
+          summary: 'Get schemas filtered by topicId (scans paginated /schemas)',
+          parameters: [
+            {
+              in: 'path',
+              name: 'topicId',
+              required: true,
+              schema: { type: 'string' },
+              example: '0.0.8073625',
+            },
+            {
+              in: 'query',
+              name: 'pageSize',
+              required: false,
+              schema: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 200,
+                default: 100,
+              },
+              description: 'Per-page fetch size when scanning schemas.',
+            },
+            {
+              in: 'query',
+              name: 'maxPages',
+              required: false,
+              schema: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 200,
+                default: 50,
+              },
+              description: 'Safety limit for pagination loops.',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Schemas retrieved',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/guardian/policies/{policyId}': {
+        get: {
+          tags: ['Guardian Policies'],
+          summary:
+            'Get Guardian policy by policyId via URL + /policies/{policyId}',
+          parameters: [
+            {
+              in: 'path',
+              name: 'policyId',
+              required: true,
+              schema: { type: 'string' },
+              example: '6917fef5e88fa758ecc72e1b',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Policy retrieved',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+        put: {
+          tags: ['Guardian Policies'],
+          summary:
+            'Update Guardian policy configuration via URL + /policies/{policyId}',
+          parameters: [
+            {
+              in: 'path',
+              name: 'policyId',
+              required: true,
+              schema: { type: 'string' },
+              example: '6917fef5e88fa758ecc72e1b',
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/GuardianUpdatePolicyRequest',
+                },
+                examples: {
+                  configUpdate: {
+                    value: {
+                      config: {
+                        id: 'a75b9508-18ce-4c97-89c4-ce253e5350a9',
+                        blockType: 'interfaceContainerBlock',
+                        permissions: ['ANY_ROLE'],
+                        onErrorAction: 'no-action',
+                        uiMetaData: { type: 'blank' },
+                        tag: '',
+                        children: [
+                          {
+                            blockType: 'requestVcDocumentBlock',
+                            defaultActive: true,
+                            permissions: ['ANY_ROLE'],
+                            onErrorAction: 'no-action',
+                            editType: 'new',
+                            uiMetaData: { type: 'page' },
+                            presetFields: [],
+                            tag: 'Block_1',
+                            children: [],
+                            events: [],
+                            artifacts: [],
+                          },
+                        ],
+                        events: [],
+                        artifacts: [],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Policy updated',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/guardian/policies/{policyId}/publish': {
+        put: {
+          tags: ['Guardian Policies'],
+          summary:
+            'Publish policy by policyId via URL + /policies/{policyId}/publish',
+          parameters: [
+            {
+              in: 'path',
+              name: 'policyId',
+              required: true,
+              schema: { type: 'string' },
+              example: '6917fef5e88fa758ecc72e1b',
+            },
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/GuardianPublishPolicyRequest',
+                },
+                examples: {
+                  defaultVersion: {
+                    value: { policyVersion: '1.0.0' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Policy published',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/guardian/policies/{policyId}/publish-treasury': {
+        put: {
+          tags: ['Guardian Policies'],
+          summary:
+            'Publish policy by policyId using TREASURY_USERNAME/TREASURY_PASSWORD',
+          parameters: [
+            {
+              in: 'path',
+              name: 'policyId',
+              required: true,
+              schema: { type: 'string' },
+              example: '6917fef5e88fa758ecc72e1b',
+            },
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/GuardianPublishPolicyRequest',
+                },
+                examples: {
+                  defaultVersion: {
+                    value: { policyVersion: '1.0.0' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Policy published with treasury account',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/guardian/mint': {
+        post: {
+          tags: ['Guardian Operations'],
+          summary: 'Execute Guardian mint block (ported from old Guardian app)',
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GuardianMintRequest' },
+                examples: {
+                  defaultConfig: {
+                    value: {
+                      document: {
+                        field0: 'walletAddress',
+                        field1: 'tokenId',
+                        field2: 'amount',
+                        field3: '',
+                        field4: '',
+                      },
+                    },
+                  },
+                  overridePolicyBlock: {
+                    value: {
+                      policyId: 'policy-id',
+                      blockUUID: 'block-uuid',
+                      payload: {
+                        document: {
+                          field0: 'walletAddress',
+                          field1: 'tokenId',
+                          field2: 'amount',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Mint block executed',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/guardian/wipe': {
+        post: {
+          tags: ['Guardian Operations'],
+          summary:
+            'Execute Guardian wipe block. Supports single/range serial input and auto mode',
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GuardianWipeRequest' },
+                examples: {
+                  singleSerial: {
+                    value: {
+                      document: {
+                        field1: '4',
+                      },
+                    },
+                  },
+                  serialRange: {
+                    value: {
+                      document: {
+                        field1: '4-8',
+                      },
+                    },
+                  },
+                  autoMode: {
+                    value: {
+                      tokenId: '0.0.7264176',
+                      targetAccountId: '0.0.7257818',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Wipe block executed',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
       '/api/agent/froggy-planner': {
         post: {
           tags: ['Agent'],
@@ -992,6 +1561,279 @@ function buildOpenApiSpec(serverUrl, options = {}) {
         },
       },
       schemas: {
+                GuardianSchemaPushRequest: {
+          type: 'object',
+          properties: {
+            payload: {
+              type: 'object',
+              additionalProperties: true,
+              description:
+                'Optional explicit payload sent as-is to /schemas/push/{topicId}.',
+            },
+            uuid: {
+              type: 'string',
+              description:
+                'Optional schema UUID. If omitted, server auto-generates one.',
+            },
+            name: { type: 'string', example: 'test' },
+            description: { type: 'string', example: '' },
+            entity: { type: 'string', example: 'VC' },
+            properties: {
+              type: 'object',
+              additionalProperties: true,
+              description:
+                'JSON schema properties. If document is omitted, server wraps this into document.',
+            },
+            required: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['@context', 'type', 'policyId'],
+            },
+            additionalProperties: { type: 'boolean', example: false },
+            $defs: {
+              type: 'object',
+              additionalProperties: true,
+              example: {},
+            },
+            document: {
+              type: 'object',
+              additionalProperties: true,
+              description:
+                'Optional full Guardian document object. If provided, it takes precedence.',
+            },
+          },
+          additionalProperties: true,
+        },
+        GuardianPublishPolicyRequest: {
+          type: 'object',
+          properties: {
+            policyVersion: {
+              type: 'string',
+              example: '1.0.0',
+              default: '1.0.0',
+              description: 'Policy version sent to Guardian publish endpoint.',
+            },
+          },
+          additionalProperties: true,
+        },
+        GuardianUpdatePolicyRequest: {
+          type: 'object',
+          properties: {
+            config: {
+              type: 'object',
+              additionalProperties: true,
+              description:
+                'Policy config object forwarded to PUT /policies/{policyId}.',
+            },
+            payload: {
+              type: 'object',
+              additionalProperties: true,
+              description:
+                'Optional explicit payload. If set, it is sent as-is to PUT /policies/{policyId}.',
+            },
+          },
+          required: ['config'],
+          additionalProperties: true,
+        },
+        GuardianCreatePolicyRequest: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: 'test' },
+            applicabilityConditions: { type: 'string', example: 'test' },
+            detailsUrl: { type: 'string', example: 'test' },
+            policyTag: { type: 'string', example: 'Tag_17725515820794' },
+            typicalProjects: { type: 'string', example: '' },
+            topicDescription: { type: 'string', example: '' },
+            description: { type: 'string', example: '' },
+            categories: {
+              type: 'array',
+              items: { type: 'string' },
+              example: [
+                '6917d97da17a3035b283a89e',
+                '6917d97da17a3035b283a887',
+                '6917d97da17a3035b283a889',
+                '6917d97da17a3035b283a896',
+                '6917d97da17a3035b283a89a',
+              ],
+            },
+            importantParameters: {
+              type: 'object',
+              properties: {
+                atValidation: { type: 'string', example: '' },
+                monitored: { type: 'string', example: '' },
+              },
+              additionalProperties: true,
+            },
+            payload: {
+              type: 'object',
+              description:
+                'Optional explicit payload. If set, it is sent as-is to /policies/push.',
+              additionalProperties: true,
+            },
+          },
+          required: ['name', 'policyTag', 'categories', 'importantParameters'],
+          additionalProperties: true,
+        },
+        GuardianPolicyFlowAgentRequest: {
+          type: 'object',
+          properties: {
+            stationName: {
+              type: 'string',
+              example: 'Madison Square Garden',
+              description:
+                'Station display name injected into cloned policy/schema names.',
+            },
+            station_name: {
+              type: 'string',
+              example: 'Madison Square Garden',
+              description: 'Alias of stationName.',
+            },
+            name: {
+              type: 'string',
+              example: 'Madison Square Garden',
+              description: 'Alias of stationName.',
+            },
+            carbonTemplatePolicyId: {
+              type: 'string',
+              example: '6917fef5e88fa758ecc72e1b',
+              description:
+                'Fixed source Carbon Offset template policyId. If provided, it must equal 6917fef5e88fa758ecc72e1b.',
+            },
+            wipeTemplatePolicyId: {
+              type: 'string',
+              example: '69186a11e88fa758ecc73127',
+              description:
+                'Fixed source Wipe Token template policyId. If provided, it must equal 69186a11e88fa758ecc73127.',
+            },
+            policyVersion: {
+              type: 'string',
+              example: '1.0.0',
+              default: '1.0.0',
+              description: 'Version passed to publish endpoints.',
+            },
+            secondPolicyDelayMs: {
+              type: 'integer',
+              example: 10000,
+              default: 10000,
+              description:
+                'Delay before starting the second policy flow (wipe token). Default 10000ms.',
+            },
+          },
+          required: ['stationName'],
+          additionalProperties: false,
+        },
+        GuardianMintRequest: {
+          type: 'object',
+          properties: {
+            policyId: {
+              type: 'string',
+              description:
+                'Optional override. Defaults to mintTokenRequestVCBlock_policyID.',
+            },
+            blockUUID: {
+              type: 'string',
+              description:
+                'Optional override. Defaults to mintTokenRequestVCBlock_blockUUID.',
+            },
+            payload: {
+              type: 'object',
+              additionalProperties: true,
+              description:
+                'Exact payload posted to Guardian policy block. If omitted, root object is used as payload.',
+            },
+            document: {
+              type: 'object',
+              additionalProperties: true,
+              description: 'Convenience shorthand if payload is omitted.',
+            },
+          },
+          additionalProperties: true,
+        },
+        GuardianWipeRequest: {
+          type: 'object',
+          properties: {
+            policyId: {
+              type: 'string',
+              description:
+                'Optional override. Defaults to wipeTokenRequestVCBlock_policyID.',
+            },
+            blockUUID: {
+              type: 'string',
+              description:
+                'Optional override. Defaults to wipeTokenRequestVCBlock_blockUUID.',
+            },
+            tokenId: {
+              type: 'string',
+              description:
+                'Used in auto wipe mode when document.field1 is empty.',
+            },
+            targetAccountId: {
+              type: 'string',
+              description:
+                'Used in auto wipe mode when document.field1 is empty.',
+            },
+            network: {
+              type: 'string',
+              enum: ['testnet'],
+              example: 'testnet',
+              description: 'Guardian is testnet-only.',
+            },
+            payload: {
+              type: 'object',
+              additionalProperties: true,
+              description:
+                'Exact payload posted to Guardian policy block. If document.field1 exists, single/range wipe mode is used.',
+            },
+            document: {
+              type: 'object',
+              properties: {
+                field1: {
+                  type: 'string',
+                  description:
+                    'Serial selector. "4" for single, "4-8" for range, empty for auto mode.',
+                },
+              },
+              additionalProperties: true,
+            },
+          },
+          additionalProperties: true,
+        },
+        GuardianTokenAssociateRequest: {
+          type: 'object',
+          properties: {
+            accountId: {
+              type: 'string',
+              example: '0.0.7098424',
+              description:
+                'Hedera account to associate token(s) with. Required unless OPERATOR_ID is set.',
+            },
+            privateKey: {
+              type: 'string',
+              description:
+                'Private key for accountId. Optional if OPERATOR_KEY is set.',
+            },
+            tokenId: {
+              type: 'string',
+              example: '0.0.8061310',
+            },
+            tokenIds: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['0.0.8061310', '0.0.8061316'],
+            },
+            network: {
+              type: 'string',
+              enum: ['testnet'],
+              example: 'testnet',
+              description: 'Guardian is testnet-only.',
+            },
+            memo: {
+              type: 'string',
+              description: 'Optional Hedera tx memo (max 100 chars).',
+            },
+          },
+          additionalProperties: true,
+        },
         DiscoveryAreaRequest: {
           type: 'object',
           properties: {
