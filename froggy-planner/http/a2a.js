@@ -344,3 +344,82 @@ function buildMatchedPoliciesText(policies) {
   if (lines.length === 0) return null;
   return lines.join('; ');
 }
+
+function buildBalanceText(result) {
+  if (!result || typeof result !== 'object' || !result.balance) return null;
+
+  const payload =
+    result.balance && typeof result.balance === 'object'
+      ? result.balance
+      : result;
+
+  const assetType = asNonEmptyText(payload.assetType) || 'token';
+  const stationId =
+    payload.stationId !== undefined && payload.stationId !== null
+      ? ` for station ${payload.stationId}`
+      : '';
+  const balanceValue =
+    asNonEmptyText(payload.balance && payload.balance.value) ||
+    asNonEmptyText(payload.balance);
+
+  if (!balanceValue) return null;
+  return `Your ${assetType} balance${stationId} is ${balanceValue}.`;
+}
+
+function buildIssuanceText(result) {
+  if (!result || typeof result !== 'object' || !result.issuance) return null;
+  const payload =
+    result.issuance && typeof result.issuance === 'object'
+      ? result.issuance
+      : result;
+  const stationId =
+    payload.stationId !== undefined && payload.stationId !== null
+      ? ` for station ${payload.stationId}`
+      : '';
+  const detailParts = [];
+  if (payload?.equity?.tokenAddress) {
+    detailParts.push(`equity ${payload.equity.tokenAddress}`);
+  }
+  if (payload?.bond?.tokenAddress) {
+    detailParts.push(`bond ${payload.bond.tokenAddress}`);
+  }
+  return detailParts.length > 0
+    ? `Asset issuance completed${stationId}: ${detailParts.join(', ')}.`
+    : `Asset issuance completed${stationId}.`;
+}
+
+function buildChoiceText(result) {
+  if (!result || typeof result !== 'object' || !result.choices) return null;
+  const payload =
+    result.choices && typeof result.choices === 'object'
+      ? result.choices
+      : result;
+  const station =
+    payload.station && typeof payload.station === 'object'
+      ? payload.station
+      : {};
+  const pricing =
+    payload.pricing && typeof payload.pricing === 'object'
+      ? payload.pricing
+      : {};
+  const stationLabel =
+    station.stationId !== undefined && station.stationId !== null
+      ? `station ${station.stationId}`
+      : 'the station';
+  const stationName = asNonEmptyText(station.stationName);
+  const equityPrice = asNonEmptyText(pricing.equityPriceHbar);
+  const bondPrice = asNonEmptyText(pricing.bondPriceHbar);
+  const pricingText = [
+    equityPrice ? `equity ${equityPrice} HBAR` : null,
+    bondPrice ? `bond ${bondPrice} HBAR` : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const prefix = stationName
+    ? `${stationLabel} (${stationName})`
+    : stationLabel;
+  return pricingText
+    ? `Investment choices for ${prefix}: ${pricingText}.`
+    : `Investment choices are ready for ${prefix}.`;
+}
