@@ -643,3 +643,62 @@ function buildCompletedTask({
     metadata: metadata || {},
   };
 }
+
+function taskMetadataFromResult(result, source) {
+  if (!result || typeof result !== 'object') return {};
+
+  return {
+    source,
+    ...(result.intent ? { intent: result.intent } : {}),
+    ...(result.status ? { status: result.status } : {}),
+    ...(result.degraded !== undefined ? { degraded: result.degraded } : {}),
+  };
+}
+
+function buildArtifactsFromResult(result, { agentConfig, replyText }) {
+  if (result === undefined || result === null) return [];
+
+  const metadata =
+    result && typeof result === 'object'
+      ? {
+          source: agentConfig.source,
+          ...(result.intent ? { intent: result.intent } : {}),
+          ...(result.status ? { status: result.status } : {}),
+        }
+      : { source: agentConfig.source };
+
+  if (result && typeof result === 'object') {
+    return [
+      {
+        artifactId: randomUUID(),
+        name: `${agentConfig.key}-result`,
+        description: `Structured result from ${agentConfig.name}`,
+        parts: [
+          {
+            kind: 'data',
+            data: result,
+          },
+        ],
+        metadata,
+      },
+    ];
+  }
+
+  const text = asNonEmptyText(replyText) || asNonEmptyText(result);
+  if (!text) return [];
+
+  return [
+    {
+      artifactId: randomUUID(),
+      name: `${agentConfig.key}-result`,
+      description: `Text result from ${agentConfig.name}`,
+      parts: [
+        {
+          kind: 'text',
+          text,
+        },
+      ],
+      metadata,
+    },
+  ];
+}
