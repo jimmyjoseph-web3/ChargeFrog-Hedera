@@ -115,3 +115,27 @@ const A2A_AGENTS = Object.freeze({
     skills: [],
   },
 });
+
+function resolveAgentConfig(agentKey = 'planner') {
+  return A2A_AGENTS[agentKey] || A2A_AGENTS.planner;
+}
+
+function buildAgentSkill({
+  id,
+  name,
+  description,
+  tags,
+  examples,
+  inputModes,
+  outputModes,
+}) {
+  return {
+    id,
+    name,
+    description,
+    tags,
+    examples,
+    inputModes,
+    outputModes,
+  };
+}
