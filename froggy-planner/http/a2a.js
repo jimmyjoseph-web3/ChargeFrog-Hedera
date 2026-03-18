@@ -583,3 +583,63 @@ function resultToReplyText(result) {
     'No reply was produced.'
   );
 }
+
+function buildAgentMessage({
+  text,
+  contextId,
+  taskId,
+  correlationId,
+  metadata,
+}) {
+  return {
+    kind: 'message',
+    messageId: randomUUID(),
+    contextId,
+    taskId,
+    role: 'agent',
+    parts: [{ kind: 'text', text }],
+    metadata: {
+      ...(metadata || {}),
+      ...(correlationId ? { correlationId } : {}),
+    },
+  };
+}
+
+function buildUserMessageHistory(message, contextId, taskId) {
+  return {
+    kind: 'message',
+    messageId:
+      (message && message.messageId && String(message.messageId).trim()) ||
+      randomUUID(),
+    contextId,
+    taskId,
+    role: 'user',
+    parts: normalizeParts(message && message.parts),
+    metadata:
+      message && message.metadata && typeof message.metadata === 'object'
+        ? message.metadata
+        : {},
+  };
+}
+
+function buildCompletedTask({
+  taskId,
+  contextId,
+  userMessage,
+  agentMessage,
+  metadata,
+  artifacts,
+}) {
+  return {
+    id: taskId,
+    contextId,
+    kind: 'task',
+    status: {
+      state: 'completed',
+      message: agentMessage,
+    },
+    ...(Array.isArray(artifacts) && artifacts.length > 0 ? { artifacts } : {}),
+    history: [userMessage, agentMessage],
+    metadata: metadata || {},
+  };
+}
