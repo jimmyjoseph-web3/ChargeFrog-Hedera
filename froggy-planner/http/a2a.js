@@ -423,3 +423,53 @@ function buildChoiceText(result) {
     ? `Investment choices for ${prefix}: ${pricingText}.`
     : `Investment choices are ready for ${prefix}.`;
 }
+
+function buildPurchaseText(result) {
+  if (!result || typeof result !== 'object' || !result.purchase) return null;
+  const payload =
+    result.purchase && typeof result.purchase === 'object'
+      ? result.purchase
+      : result;
+  const amount = asNonEmptyText(payload.amount);
+  const assetType = asNonEmptyText(payload.assetType) || 'asset';
+  const stationId =
+    payload.stationId !== undefined && payload.stationId !== null
+      ? ` for station ${payload.stationId}`
+      : '';
+  const txParts = [
+    asNonEmptyText(payload.mintTxHash) ? `mint ${payload.mintTxHash}` : null,
+    asNonEmptyText(payload.issueTxHash) ? `issue ${payload.issueTxHash}` : null,
+  ].filter(Boolean);
+  const prefix = amount
+    ? `Purchase submitted: ${amount} ${assetType}${stationId}.`
+    : `Purchase submitted for ${assetType}${stationId}.`;
+  return txParts.length > 0 ? `${prefix} ${txParts.join(', ')}.` : prefix;
+}
+
+function buildCandidateText(result) {
+  if (!result || typeof result !== 'object' || !result.stationCandidate)
+    return null;
+  const payload =
+    result.stationCandidate && typeof result.stationCandidate === 'object'
+      ? result.stationCandidate
+      : result;
+  const proposedStationName = asNonEmptyText(payload.proposedStationName);
+  const area = asNonEmptyText(payload.area);
+  const currentCount = asNonEmptyText(payload.currentCount);
+  const threshold = asNonEmptyText(payload.threshold);
+  const detailParts = [
+    proposedStationName ? `proposed station ${proposedStationName}` : null,
+    area ? `area ${area}` : null,
+    currentCount && threshold ? `interest ${currentCount}/${threshold}` : null,
+  ].filter(Boolean);
+  if (detailParts.length === 0) return null;
+  return `Station candidate ready: ${detailParts.join(', ')}.`;
+}
+
+function buildGuardianPolicyCreationText(result) {
+  if (!result || typeof result !== 'object') return null;
+  if (result.intent !== 'CREATE_GUARDIAN_POLICIES_FOR_STATION') return null;
+  const stationName = asNonEmptyText(result.stationName);
+  if (!stationName) return null;
+  return `Done! Here are the details of your replication workflow for ${stationName}.`;
+}
