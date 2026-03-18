@@ -248,3 +248,99 @@ function extractWalletAddress(params) {
 
   return undefined;
 }
+
+function asNonEmptyText(value) {
+  if (value === undefined || value === null) return null;
+
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    return normalized === '' ? null : normalized;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((item) => asNonEmptyText(item))
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    return normalized === '' ? null : normalized;
+  }
+
+  if (typeof value === 'object') {
+    const direct = [
+      value.text,
+      value.reply,
+      value.summary,
+      value.message,
+      value.error,
+    ]
+      .map((item) => asNonEmptyText(item))
+      .find(Boolean);
+
+    if (direct) return direct;
+    return null;
+  }
+
+  return null;
+}
+
+function buildStationListText(stations) {
+  if (!Array.isArray(stations) || stations.length === 0) return null;
+
+  const lines = stations
+    .map((station) => {
+      if (!station || typeof station !== 'object') return null;
+      const stationId =
+        station.stationId !== undefined && station.stationId !== null
+          ? `station ${station.stationId}`
+          : 'station';
+      const stationName =
+        typeof station.stationName === 'string' &&
+        station.stationName.trim() !== ''
+          ? station.stationName.trim()
+          : 'Unnamed station';
+      const stage = asNonEmptyText(station.stage);
+      const equityPrice = asNonEmptyText(
+        station?.pricing?.equityPriceHbar ?? station?.equityPriceHbar,
+      );
+      const bondPrice = asNonEmptyText(
+        station?.pricing?.bondPriceHbar ?? station?.bondPriceHbar,
+      );
+      const detailParts = [];
+      if (stage) detailParts.push(stage);
+      if (equityPrice) detailParts.push(`equity ${equityPrice} HBAR`);
+      if (bondPrice) detailParts.push(`bond ${bondPrice} HBAR`);
+      return detailParts.length > 0
+        ? `${stationId}: ${stationName} (${detailParts.join(', ')})`
+        : `${stationId}: ${stationName}`;
+    })
+    .filter(Boolean);
+
+  if (lines.length === 0) return null;
+  return lines.join('; ');
+}
+
+function buildMatchedPoliciesText(policies) {
+  if (!Array.isArray(policies) || policies.length === 0) return null;
+
+  const lines = policies
+    .map((policy) => {
+      if (!policy || typeof policy !== 'object') return null;
+      const name =
+        asNonEmptyText(policy.name) ||
+        asNonEmptyText(policy.policyName) ||
+        asNonEmptyText(policy.title) ||
+        'Unnamed policy';
+      const policyId =
+        asNonEmptyText(policy.policyId) || asNonEmptyText(policy.id);
+      return policyId ? `${name} (${policyId})` : name;
+    })
+    .filter(Boolean);
+
+  if (lines.length === 0) return null;
+  return lines.join('; ');
+}
