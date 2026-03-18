@@ -777,3 +777,42 @@ function handleTasksGet(params) {
 
   return task;
 }
+
+async function handleA2aJsonRpc(body, { agentKey = 'planner', runner }) {
+  if (!body || typeof body !== 'object') {
+    return jsonRpcError(null, -32600, 'Invalid JSON-RPC request');
+  }
+
+  const { id, jsonrpc, method, params } = body;
+  const agentConfig = resolveAgentConfig(agentKey);
+  if (jsonrpc !== '2.0') {
+    return jsonRpcError(id, -32600, 'jsonrpc must be "2.0"');
+  }
+
+  try {
+    if (method === 'message/send') {
+      const task = await handleMessageSend(params || {}, agentConfig, runner);
+      return jsonRpcSuccess(id, task);
+    }
+
+    if (method === 'tasks/get') {
+      const task = handleTasksGet(params || {});
+      return jsonRpcSuccess(id, task);
+    }
+
+    return jsonRpcError(id, -32601, `Method not found: ${method}`);
+  } catch (error) {
+    const code = error && error.code === 404 ? -32004 : -32000;
+    return jsonRpcError(
+      id,
+      code,
+      error && error.message ? error.message : 'A2A request failed',
+    );
+  }
+}
+
+module.exports = {
+  A2A_AGENTS,
+  buildAgentCard,
+  handleA2aJsonRpc,
+};
