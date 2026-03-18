@@ -181,3 +181,70 @@ function jsonRpcSuccess(id, result) {
     result,
   };
 }
+
+function jsonRpcError(id, code, message, data) {
+  return {
+    jsonrpc: '2.0',
+    id: id === undefined ? null : id,
+    error: {
+      code,
+      message,
+      ...(data === undefined ? {} : { data }),
+    },
+  };
+}
+
+function normalizeParts(parts) {
+  if (!Array.isArray(parts)) return [];
+
+  return parts
+    .map((part) => {
+      if (!part || typeof part !== 'object') return null;
+      if (typeof part.text === 'string') {
+        return { kind: 'text', text: part.text };
+      }
+      if (part.data !== undefined) {
+        return { kind: 'data', data: part.data };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+function extractMessageText(message) {
+  const parts = normalizeParts(message && message.parts);
+  return parts
+    .filter((part) => part.kind === 'text')
+    .map((part) => String(part.text || '').trim())
+    .filter((value) => value !== '')
+    .join('\n')
+    .trim();
+}
+
+function extractMessageData(message) {
+  const parts = normalizeParts(message && message.parts);
+  const dataPart = parts.find((part) => part.kind === 'data');
+  return dataPart ? dataPart.data : undefined;
+}
+
+function extractWalletAddress(params) {
+  const candidates = [
+    params && params.walletAddress,
+    params && params.metadata && params.metadata.walletAddress,
+    params &&
+      params.message &&
+      params.message.metadata &&
+      params.message.metadata.walletAddress,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate !== undefined && candidate !== null) {
+      const value = String(candidate).trim();
+      if (value !== '') {
+        return value;
+      }
+    }
+  }
+
+  return undefined;
+}
