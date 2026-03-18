@@ -473,3 +473,113 @@ function buildGuardianPolicyCreationText(result) {
   if (!stationName) return null;
   return `Done! Here are the details of your replication workflow for ${stationName}.`;
 }
+
+function buildPreferredTextFromResult(result) {
+  if (!result || typeof result !== 'object') return null;
+
+  if (result.status === 'listed' && Array.isArray(result.stations)) {
+    const stationText = buildStationListText(result.stations);
+    if (stationText) {
+      return `There are ${result.stations.length} investable station(s) right now: ${stationText}.`;
+    }
+  }
+
+  if (
+    result.intent === 'LIST_FULLY_INVESTED_STATIONS' &&
+    Array.isArray(result.stations)
+  ) {
+    const stationText = buildStationListText(result.stations);
+    if (stationText) {
+      return result.stations.length === 1
+        ? `There is 1 fully-invested station ready for Guardian policy and schema creation: ${stationText}.`
+        : `There are ${result.stations.length} fully-invested stations ready for Guardian policy and schema creation: ${stationText}.`;
+    }
+  }
+
+  return (
+    buildChoiceText(result) ||
+    buildPurchaseText(result) ||
+    buildBalanceText(result) ||
+    buildIssuanceText(result) ||
+    buildCandidateText(result) ||
+    buildGuardianPolicyCreationText(result)
+  );
+}
+
+function buildFallbackTextFromResult(result) {
+  if (!result || typeof result !== 'object') return null;
+
+  if (Array.isArray(result.stations) && result.stations.length > 0) {
+    const stationText = buildStationListText(result.stations);
+    if (stationText) {
+      return `Available stations: ${stationText}.`;
+    }
+  }
+
+  if (
+    Array.isArray(result.matchedPolicies) &&
+    result.matchedPolicies.length > 0
+  ) {
+    const policyText = buildMatchedPoliciesText(result.matchedPolicies);
+    if (policyText) {
+      return `Matched policies: ${policyText}.`;
+    }
+  }
+
+  const balanceText = buildBalanceText(result);
+  if (balanceText) return balanceText;
+
+  const issuanceText = buildIssuanceText(result);
+  if (issuanceText) return issuanceText;
+
+  if (result.status === 'listed' && Array.isArray(result.stations)) {
+    return result.stations.length
+      ? `There are ${result.stations.length} investable station(s) available.`
+      : 'There are no investable stations available.';
+  }
+
+  if (result.status === 'no_station_available') {
+    return 'No investable station is available yet.';
+  }
+
+  if (result.status === 'station_not_found') {
+    return 'The requested station could not be found.';
+  }
+
+  if (result.status === 'choices_ready') {
+    return 'Investment choices are ready.';
+  }
+
+  if (result.status === 'balance_retrieved') {
+    return 'The requested token balance was retrieved.';
+  }
+
+  if (result.status === 'assets_issued') {
+    return 'Station assets were issued successfully.';
+  }
+
+  if (result.status === 'proposal_created') {
+    return 'The investment proposal was created successfully.';
+  }
+
+  if (result.status === 'candidate_ready') {
+    return 'A station candidate is ready for proposal creation.';
+  }
+
+  if (result.status === 'not_enough_interest') {
+    return 'There is not enough neighborhood interest yet.';
+  }
+
+  return null;
+}
+
+function resultToReplyText(result) {
+  return (
+    asNonEmptyText(result && result.reply) ||
+    asNonEmptyText(result && result.summary) ||
+    asNonEmptyText(result && result.error) ||
+    buildPreferredTextFromResult(result) ||
+    buildFallbackTextFromResult(result) ||
+    'No reply was produced.'
+  );
+}
