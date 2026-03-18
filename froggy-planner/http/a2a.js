@@ -702,3 +702,78 @@ function buildArtifactsFromResult(result, { agentConfig, replyText }) {
     },
   ];
 }
+
+async function handleMessageSend(params, agentConfig, runner) {
+  const message = params && params.message;
+  const text = extractMessageText(message);
+  const data = extractMessageData(message);
+
+  if (!text && data === undefined) {
+    throw new Error('message.parts must contain at least one text or data value');
+  }
+
+  const walletAddress = extractWalletAddress(params);
+  const result = await runner(
+    agentConfig.runnerInputBuilder({ text, data, walletAddress, params, message }),
+  );
+
+  const reply = resultToReplyText(result);
+
+  const taskId =
+    (message && message.taskId && String(message.taskId).trim()) ||
+    randomUUID();
+  const contextId =
+    (params && params.contextId && String(params.contextId).trim()) ||
+    (message && message.contextId && String(message.contextId).trim()) ||
+    randomUUID();
+
+  const userMessage = buildUserMessageHistory(message, contextId, taskId);
+  const agentMessage = buildAgentMessage({
+    text: reply,
+    contextId,
+    taskId,
+    correlationId: result && result.correlationId,
+    metadata: {
+      a2a: true,
+      endpoint: agentConfig.responseEndpoint,
+      ...(result && typeof result === 'object'
+        ? {
+            intent: result.intent || null,
+            status: result.status || null,
+          }
+        : {}),
+    },
+  });
+
+  const task = buildCompletedTask({
+    taskId,
+    contextId,
+    userMessage,
+    agentMessage,
+    artifacts: buildArtifactsFromResult(result, {
+      agentConfig,
+      replyText: reply,
+    }),
+    metadata: taskMetadataFromResult(result, agentConfig.source),
+  });
+
+  A2A_TASKS.set(taskId, task);
+
+  return task;
+}
+
+function handleTasksGet(params) {
+  const taskId = params && params.id ? String(params.id).trim() : '';
+  if (!taskId) {
+    throw new Error('tasks/get requires params.id');
+  }
+
+  const task = A2A_TASKS.get(taskId);
+  if (!task) {
+    const error = new Error(`Task ${taskId} was not found`);
+    error.code = 404;
+    throw error;
+  }
+
+  return task;
+}
