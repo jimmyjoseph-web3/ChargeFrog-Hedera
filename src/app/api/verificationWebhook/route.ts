@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { db } from "@/lib/firebaseAdmin";
+import { db } from "@/src/lib/firebaseAdmin";
 
 const WEBHOOK_SECRET_KEY = process.env.DIDIT_WEBHOOK_KEY as string;
 
