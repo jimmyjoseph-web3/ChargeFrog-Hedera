@@ -2,3 +2,4 @@
 ./admin-panel/
 ./chargefrog-contracts
 ./contracts
+./src/components/chat
