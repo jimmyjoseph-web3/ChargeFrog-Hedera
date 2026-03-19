@@ -381,3 +381,219 @@ async function createAuthenticatedClient(agentKey) {
 
   return client;
 }
+
+async function waitForCompletionIfPending(client, response, stage) {
+  if (!isPendingRegisterAgentResponse(response) || !response.attemptId) {
+    return null;
+  }
+
+  const progress = await client.waitForRegistrationCompletion(
+    response.attemptId,
+    DEFAULT_WAIT_OPTIONS,
+  );
+
+  return {
+    stage,
+    attemptId: response.attemptId,
+    progress,
+  };
+}
+
+function summarizeResponse(response) {
+  return {
+    success: response.success,
+    status: response.status || null,
+    uaid: response.uaid || null,
+    agentId: response.agentId || null,
+    registry: response.registry || null,
+    attemptId: response.attemptId || null,
+    message: response.message || null,
+    additionalRegistries: Array.isArray(response.additionalRegistries)
+      ? response.additionalRegistries
+      : [],
+    partial: isPartialRegisterAgentResponse(response),
+    successResponse: isSuccessRegisterAgentResponse(response),
+    pending: isPendingRegisterAgentResponse(response),
+  };
+}
+
+function buildRuntimeContext(agentKey) {
+  return {
+    agentKey,
+    alias: buildAgentAlias(agentKey),
+    publicBaseUrl: getPublicBaseUrl(),
+    brokerBaseUrl: getBrokerBaseUrl(),
+  };
+}
+
+async function verifyErc8004Registration(client, runtime) {
+  const searchResults = await client.search({
+    registries: [DEFAULT_ERC8004_SEARCH_REGISTRY],
+    q: runtime.alias,
+    limit: 5,
+  });
+
+  return {
+    registry: DEFAULT_ERC8004_SEARCH_REGISTRY,
+    total: searchResults.total,
+    hits: (searchResults.hits || []).map((agent) => ({
+      name: agent.name || null,
+      uaid: agent.uaid || null,
+      registry: agent.registry || null,
+      metadata: {
+        chainName: agent.metadata?.chainName || null,
+        ownerWallet: agent.metadata?.ownerWallet || null,
+      },
+    })),
+  };
+}
+
+async function quoteAgent(agentKey) {
+  const runtime = buildRuntimeContext(agentKey);
+  const client = await createAuthenticatedClient(agentKey);
+  const additional = await resolveValidatedAdditionalRegistries(client, agentKey);
+  /** @type {HCS11Profile} */
+  const profile = buildHcs11Profile(agentKey, runtime);
+  /** @type {AgentRegistrationRequest} */
+  const registrationPayload = buildRegistrationPayload(profile, agentKey);
+  const registrationQuote =
+    await client.getRegistrationQuote(registrationPayload);
+  /** @type {AgentRegistrationRequest} */
+  const updatePayload = buildRegistrationPayload(profile, agentKey, {
+    additionalRegistries: additional.selected,
+  });
+
+  console.log(
+    JSON.stringify(
+      {
+        mode: 'quote',
+        agent: agentKey,
+        alias: runtime.alias,
+        brokerBaseUrl: runtime.brokerBaseUrl,
+        publicBaseUrl: runtime.publicBaseUrl,
+        profile,
+        registration: {
+          step: 'registerAgent',
+          payload: registrationPayload,
+          quote: registrationQuote,
+        },
+        update: {
+          step: 'updateAgent',
+          note: 'Run updateAgent(uaid, payload) after registerAgent succeeds. The SDK does not expose a separate update quote helper.',
+          payload: updatePayload,
+          additionalRegistries: additional.selected,
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+async function registerAgent(agentKey) {
+  const runtime = buildRuntimeContext(agentKey);
+  const client = await createAuthenticatedClient(agentKey);
+  const additional = await resolveValidatedAdditionalRegistries(client, agentKey);
+  /** @type {HCS11Profile} */
+  const profile = buildHcs11Profile(agentKey, runtime);
+  /** @type {AgentRegistrationRequest} */
+  const registrationPayload = buildRegistrationPayload(profile, agentKey);
+  let registrationResponse;
+  try {
+    registrationResponse = await client.registerAgent(registrationPayload);
+  } catch (error) {
+    if (error instanceof Error) {
+      error.step = 'registerAgent';
+    }
+    throw error;
+  }
+  const registrationProgress = await waitForCompletionIfPending(
+    client,
+    registrationResponse,
+    'registerAgent',
+  );
+  const uaid = registrationResponse.uaid;
+
+  if (!uaid) {
+    throw new Error(
+      'registerAgent completed without a UAID; refusing to continue to ERC-8004 update.',
+    );
+  }
+
+  let updateResponse = null;
+  let updateProgress = null;
+  let verification = null;
+
+  if (additional.selected.length) {
+    /** @type {AgentRegistrationRequest} */
+    const updatePayload = buildRegistrationPayload(profile, agentKey, {
+      additionalRegistries: additional.selected,
+    });
+
+    try {
+      updateResponse = await client.updateAgent(uaid, updatePayload);
+    } catch (error) {
+      if (error instanceof Error) {
+        error.step = 'updateAgent';
+      }
+      throw error;
+    }
+    updateProgress = await waitForCompletionIfPending(
+      client,
+      updateResponse,
+      'updateAgent',
+    );
+    verification = await verifyErc8004Registration(client, runtime);
+  }
+
+  console.log(
+    JSON.stringify(
+      {
+        mode: 'register',
+        agent: agentKey,
+        alias: runtime.alias,
+        brokerBaseUrl: runtime.brokerBaseUrl,
+        publicBaseUrl: runtime.publicBaseUrl,
+        registration: summarizeResponse(registrationResponse),
+        registrationProgress,
+        update: updateResponse
+          ? summarizeResponse(updateResponse)
+          : {
+              skipped: true,
+              reason:
+                'No ERC-8004 registries selected. Set HOL_ERC8004_NETWORKS to enable the second-step update.',
+            },
+        updateProgress,
+        verification: verification || {
+          skipped: true,
+          reason:
+            'ERC-8004 verification search is only run after updateAgent(...) with additionalRegistries.',
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+async function main() {
+  const { agentKey, quoteOnly } = parseArgs(process.argv.slice(2));
+
+  if (!agentKey) {
+    throw new Error(
+      'Usage: node apps/froggy-planner/hol/registerAgent.js <froggychat|planner|foundry|guardian> [--quote]',
+    );
+  }
+
+  if (quoteOnly) {
+    await quoteAgent(agentKey);
+    return;
+  }
+
+  await registerAgent(agentKey);
+}
+
+main().catch((error) => {
+  console.error(JSON.stringify(serializeError(error), null, 2));
+  process.exitCode = 1;
+});
