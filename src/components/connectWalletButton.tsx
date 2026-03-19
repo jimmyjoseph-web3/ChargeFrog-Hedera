@@ -38,7 +38,7 @@ export default function ConnectWalletButton() {
         setIsProcessing(true);
         await handleUserCheck(address);
         setIsProcessing(false);
-        router.push("/map");
+        router.push("/profile");
       }
     };
     checkUser();

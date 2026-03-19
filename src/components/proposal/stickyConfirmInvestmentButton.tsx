@@ -5,9 +5,14 @@ import toast from "react-hot-toast";
 import { parseEther } from "viem";
 import { useAccount, useSendTransaction } from "wagmi";
 
+import {
+  buildFroggyPlannerPrompt,
+  ENABLE_FROGGY_PLANNER_AFTER_INVEST,
+} from "@/src/lib/froggyPlanner";
+
 type StickyConfirmInvestmentButtonProps = {
   stationId: string;
-  amount: number; // in HBAR
+  amount: number;
   onTransactionComplete?: (txHash: string, amount: number) => void;
 };
 
@@ -26,30 +31,84 @@ export default function StickyConfirmInvestmentButton({
     "3": process.env.NEXT_PUBLIC_STATION_3 as `0x${string}`,
   };
 
+  async function callFroggyPlannerAfterInvest(args: {
+    walletAddress: string;
+    stationId: string;
+    amount: number;
+    txHash: string;
+  }) {
+    const prompt = buildFroggyPlannerPrompt({
+      stationId: args.stationId,
+      amount: args.amount,
+    });
+
+    const payload = {
+      jsonrpc: "2.0",
+      id: `invest-${args.stationId}-${Date.now()}`,
+      method: "message/send",
+      params: {
+        message: {
+          messageId: `msg-invest-${Date.now()}`,
+          role: "user",
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
+          metadata: {
+            walletAddress: args.walletAddress,
+            stationId: args.stationId,
+            amount: args.amount,
+            investTxHash: args.txHash,
+            source: "post_investment",
+          },
+        },
+      },
+    };
+
+    const response = await fetch("/api/froggy-planner-a2a", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `froggy-planner-a2a failed: ${response.status} ${errorText}`,
+      );
+    }
+
+    return response;
+  }
+
   const handleInvest = async () => {
     if (!address) {
       toast.error("Please connect your wallet first");
       return;
     }
+
     if (isProcessing) return;
     setIsProcessing(true);
 
     try {
       const recipient = STATION_ADDRESSES[stationId];
-      if (!recipient) throw new Error(`Station #${stationId} wallet not found`);
+      if (!recipient) {
+        throw new Error(`Station #${stationId} wallet not found`);
+      }
 
-      toast.loading("⏳ Sending HBAR...");
+      toast.loading("Sending HBAR...");
 
-      // Send the HBAR transaction
       const txHash = await sendTransactionAsync({
         to: recipient,
         value: parseEther(amount.toString()),
       });
 
       toast.dismiss();
-      toast.success("✅ Investment successful!");
+      toast.success("Investment successful!");
 
-      // 🔹 Step 1: Call your ChargeFrog API to register the investor
       const registerResponse = await fetch(
         "https://chargefrog-hedera-admin-endpoints.vercel.app/api/registerInvestor",
         {
@@ -61,18 +120,17 @@ export default function StickyConfirmInvestmentButton({
             requestedShares: amount,
             investTxHash: txHash,
           }),
-        }
+        },
       );
 
       if (!registerResponse.ok) {
         const errorText = await registerResponse.text();
         throw new Error(
-          `Failed to register investor: ${registerResponse.status} ${errorText}`
+          `Failed to register investor: ${registerResponse.status} ${errorText}`,
         );
       }
 
-      // 🔹 Step 2 (optional): update Firebase or local state
-      await fetch("/api/updateAfterInvest", {
+      const updateResponse = await fetch("/api/updateAfterInvest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -82,14 +140,37 @@ export default function StickyConfirmInvestmentButton({
         }),
       });
 
-      // 🔹 Step 3: trigger callback if provided
+      if (!updateResponse.ok) {
+        const errorText = await updateResponse.text();
+        throw new Error(
+          `Failed to update post-investment flow: ${updateResponse.status} ${errorText}`,
+        );
+      }
+
+      if (ENABLE_FROGGY_PLANNER_AFTER_INVEST) {
+        try {
+          await callFroggyPlannerAfterInvest({
+            walletAddress: address,
+            stationId,
+            amount,
+            txHash,
+          });
+        } catch (plannerError) {
+          console.error("froggy-planner-a2a post-investment call failed:", plannerError);
+        }
+      }
+
       onTransactionComplete?.(txHash, amount);
 
       toast.success("🎉 You're on the list!");
-    } catch (error: any) {
+    } catch (error) {
       toast.dismiss();
       console.error("❌ Transaction or registration failed:", error);
-      toast.error(error.message || "Transaction failed");
+
+      const message =
+        error instanceof Error ? error.message : "Transaction failed";
+
+      toast.error(message);
     } finally {
       setIsProcessing(false);
     }
@@ -100,9 +181,9 @@ export default function StickyConfirmInvestmentButton({
       <button
         onClick={handleInvest}
         disabled={isProcessing}
-        className={`w-full max-w-md font-medium text-lg rounded-2xl py-4 px-6 shadow-md transition-colors ${
+        className={`w-full max-w-md rounded-2xl px-6 py-4 text-lg font-medium shadow-md transition-colors ${
           isProcessing
-            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+            ? "cursor-not-allowed bg-gray-200 text-gray-500"
             : "bg-black text-white hover:bg-gray-900"
         }`}
       >
