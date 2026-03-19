@@ -242,3 +242,142 @@ async function resolveValidatedAdditionalRegistries(client, agentKey) {
     selected: requested,
   };
 }
+
+async function resolveValidatedAdditionalRegistries(client, agentKey) {
+  const requested = resolveRequestedAdditionalRegistries(agentKey);
+
+  if (!requested.length) {
+    return {
+      requested,
+      supported: [],
+      selected: [],
+    };
+  }
+
+  const catalog = await client.getAdditionalRegistries();
+  const supported = new Set();
+
+  for (const registry of catalog.registries || []) {
+    for (const network of registry.networks || []) {
+      if (network.key) supported.add(network.key);
+      if (network.registryId) supported.add(network.registryId);
+      if (network.networkId) supported.add(network.networkId);
+    }
+  }
+
+  const supportedList = Array.from(supported);
+
+  const missing = requested.filter((value) => !supported.has(value));
+
+  if (missing.length) {
+    throw new Error(
+      `Unsupported additional registries: ${missing.join(', ')}. Supported values from broker catalog: ${supportedList.join(', ')}`,
+    );
+  }
+
+  return {
+    requested,
+    supported: supportedList,
+    selected: requested,
+  };
+}
+
+/**
+ * @param {string} agentKey
+ * @param {{ alias: string, publicBaseUrl: string }} runtime
+ * @returns {HCS11Profile}
+ */
+function buildHcs11Profile(agentKey, runtime) {
+  const config = getAgentConfig(agentKey);
+  /** @type {HCS11Profile} */
+  const profile = {
+    version: '1.0',
+    type: ProfileType.AI_AGENT,
+    display_name: config.name,
+    alias: runtime.alias,
+    bio: config.description,
+    socials: buildPublicAgentSocials(runtime.publicBaseUrl),
+    properties: {
+      tags: config.tags,
+      documentationUrl: config.documentationUrl,
+      discoveryUrl: `${runtime.publicBaseUrl}${config.discoveryPath}`,
+      agentCardUrl: `${runtime.publicBaseUrl}${config.agentCardPath}`,
+      endpointUrl: `${runtime.publicBaseUrl}${config.endpointPath}`,
+      category: config.category,
+      source: config.source,
+    },
+    aiAgent: {
+      type: AIAgentType.AUTONOMOUS,
+      model: config.getModel(),
+      capabilities: config.capabilities,
+      creator: config.provider,
+    },
+  };
+
+  return profile;
+}
+
+/**
+ * @param {HCS11Profile} profile
+ * @param {string} agentKey
+ * @param {{ additionalRegistries?: string[] }} [options]
+ * @returns {AgentRegistrationRequest}
+ */
+function buildRegistrationPayload(profile, agentKey, options = {}) {
+  const { additionalRegistries = [] } = options;
+  const config = getAgentConfig(agentKey);
+  const publicBaseUrl = getPublicBaseUrl();
+  const serviceEndpoint = `${publicBaseUrl}${config.endpointPath}`;
+  const discoveryUrl = `${publicBaseUrl}${config.discoveryPath}`;
+  const agentCardUrl = `${publicBaseUrl}${config.agentCardPath}`;
+  const documentationUrl = config.documentationUrl;
+
+  /** @type {AgentRegistrationRequest} */
+  const payload = {
+    profile,
+    communicationProtocol: 'a2a',
+    registry: DEFAULT_REGISTRY,
+    endpoint: discoveryUrl,
+    metadata: {
+      version: '1.0.0',
+      source: config.source,
+      provider: config.provider,
+      category: config.category,
+      publicUrl: serviceEndpoint,
+      endpointUrl: serviceEndpoint,
+      serviceEndpoint,
+      discoveryUrl,
+      agentCardUrl,
+      documentationUrl,
+      model: config.getModel(),
+      tags: config.tags,
+      skills: config.skills.map((skill) => ({
+        id: skill.id,
+        name: skill.name,
+      })),
+      customFields: {
+        source: config.source,
+        provider: config.provider,
+        category: config.category,
+        documentationUrl,
+        agentCardUrl,
+        discoveryUrl,
+        endpointUrl: serviceEndpoint,
+        serviceEndpoint,
+        a2aEndpoint: serviceEndpoint,
+      },
+    },
+  };
+
+  if (additionalRegistries.length) {
+    payload.additionalRegistries = additionalRegistries;
+  }
+
+  return payload;
+}
+
+async function createAuthenticatedClient(agentKey) {
+  const client = new RegistryBrokerClient(resolveBrokerClientOptions());
+
+  return client;
+}
