@@ -8,23 +8,19 @@ import StationRenderTemplate from "@/src/components/stationRenderTemplate";
 import Loader from "@/src/components/proposal/loader";
 import EmptyState from "@/src/components/proposal/emptyState";
 import ProposalContent from "@/src/components/proposal/proposalContent";
-
-type Station = {
-  stationId: number;
-  stationName: string;
-  bannerImageUrl: string;
-  hbarPriceAtCreation: number;
-  [key: string]: any;
-};
+import type { StationData } from "@/src/components/proposal/proposalFormatters";
 
 export default function ProposalDetailPage() {
   const params = useParams<{ stationId: string }>();
   const stationId = Number(params.stationId);
-  const [station, setStation] = useState<Station | null>(null);
+  const [station, setStation] = useState<StationData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isNaN(stationId)) return;
+    if (Number.isNaN(stationId)) {
+      setLoading(false);
+      return;
+    }
 
     const fetchStation = async () => {
       try {
@@ -34,12 +30,15 @@ export default function ProposalDetailPage() {
           body: JSON.stringify({ stationId }),
         });
 
-        if (!res.ok) throw new Error("Failed to fetch station");
+        if (!res.ok) {
+          throw new Error("Failed to fetch station");
+        }
 
-        const data: Station = await res.json();
+        const data = (await res.json()) as StationData;
         setStation(data);
       } catch (err) {
         console.error("Error fetching station:", err);
+        setStation(null);
       } finally {
         setLoading(false);
       }
@@ -48,22 +47,19 @@ export default function ProposalDetailPage() {
     fetchStation();
   }, [stationId]);
 
-  // Loading State
   if (loading) {
     return <Loader />;
   }
 
-  // Empty State
   if (!station) {
     return <EmptyState />;
   }
 
-  // Station Display
   return (
     <>
       <FloatingMenuBar />
       <FloatingMenuBarBgCover />
-      <StationRenderTemplate bannerImageUrl={station.bannerImageUrl}>
+      <StationRenderTemplate bannerImageUrl={station.bannerImageUrl ?? ""}>
         <ProposalContent station={station} />
       </StationRenderTemplate>
     </>

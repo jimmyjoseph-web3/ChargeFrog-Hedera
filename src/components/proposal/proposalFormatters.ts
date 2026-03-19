@@ -10,6 +10,7 @@ export type PortInfo = {
 export type StationData = {
   proposalId: string;
   stationId?: string;
+  bannerImageUrl?: string;
   stationName: string;
   openInvestmentDate?: string;
   googleMapLink?: string;
@@ -88,15 +89,26 @@ export function formatCurrency(value?: number | null, currency = "USD") {
   }).format(value);
 }
 
-export function formatNumber(value?: number | string | null, maximumFractionDigits = 0) {
+export function formatNumber(
+  value?: number | string | null,
+  maximumFractionDigits = 0,
+) {
   const numeric = typeof value === "string" ? Number(value) : value;
   if (typeof numeric !== "number" || Number.isNaN(numeric)) return "—";
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits }).format(numeric);
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits }).format(
+    numeric,
+  );
 }
 
-export function formatPercent(value?: number | null, maximumFractionDigits = 2) {
+export function formatPercent(
+  value?: number | null,
+  maximumFractionDigits = 2,
+) {
   if (typeof value !== "number" || Number.isNaN(value)) return "—";
-  return `${value.toFixed(maximumFractionDigits).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1")}%`;
+  return `${value
+    .toFixed(maximumFractionDigits)
+    .replace(/\.0+$/, "")
+    .replace(/(\.\d*?)0+$/, "$1")}%`;
 }
 
 export function formatDateDisplay(value?: string | null) {
@@ -129,7 +141,16 @@ export function parseDdMmYyyy(value?: string | null) {
 }
 
 export function getPortGroups(ports: PortInfo[] = []) {
-  const grouped = new Map<string, { key: string; count: number; acdc: string; type: string; kW: string | number }>();
+  const grouped = new Map<
+    string,
+    {
+      key: string;
+      count: number;
+      acdc: string;
+      type: string;
+      kW: string | number;
+    }
+  >();
 
   for (const port of ports) {
     const acdc = String(port.acdc || "Unknown").toUpperCase();
@@ -149,20 +170,34 @@ export function getPortGroups(ports: PortInfo[] = []) {
 }
 
 export function getAvailablePortsCount(ports: PortInfo[] = []) {
-  return ports.filter((port) => String(port.status || "").toLowerCase() === "available").length;
+  return ports.filter(
+    (port) => String(port.status || "").toLowerCase() === "available",
+  ).length;
 }
 
 export function getFundingProgressPercent(station: StationData) {
-  const issued = typeof station.numberOfSharesIssued === "number" ? station.numberOfSharesIssued : Number(station.numberOfSharesIssued || 0);
-  const total = typeof station.totalShares === "number" ? station.totalShares : Number(station.totalShares || 0);
+  const issued =
+    typeof station.numberOfSharesIssued === "number"
+      ? station.numberOfSharesIssued
+      : Number(station.numberOfSharesIssued || 0);
+  const total =
+    typeof station.totalShares === "number"
+      ? station.totalShares
+      : Number(station.totalShares || 0);
   if (!total) return 0;
   return (issued / total) * 100;
 }
 
-export function getCountdownState(openInvestmentDate?: string, isInvestmentEnded?: boolean) {
+export function getCountdownState(
+  openInvestmentDate?: string,
+  isInvestmentEnded?: boolean,
+) {
   const openDate = parseDdMmYyyy(openInvestmentDate);
   if (!openDate) {
-    return { label: isInvestmentEnded ? "Completed" : "Unavailable", isActive: false };
+    return {
+      label: isInvestmentEnded ? "Completed" : "Unavailable",
+      isActive: false,
+    };
   }
   if (isInvestmentEnded) {
     return { label: "Completed", isActive: false };
