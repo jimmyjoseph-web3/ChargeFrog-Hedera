@@ -46,7 +46,8 @@ export default function Profile() {
     fetchUserData();
   }, [address]);
 
-  const formatAddress = (addr: string) => `${addr.slice(0, 5)}...${addr.slice(-5)}`;
+  const formatAddress = (addr: string) =>
+    `${addr.slice(0, 5)}...${addr.slice(-5)}`;
 
   const handleCopy = async () => {
     if (!address) return;
@@ -89,7 +90,7 @@ export default function Profile() {
   return (
     <>
       <main className="flex flex-col items-center justify-start min-h-screen pb-[16vh] px-4">
-        <div className="mt-10">
+        <div className="mt-10 relative w-[130px] h-[130px] mx-auto">
           <Image
             src="/profile/pfp.png"
             alt="Profile picture"
@@ -97,6 +98,16 @@ export default function Profile() {
             height={130}
             className="rounded-full border-2 border-gray-100 shadow-[0_0_13.5px_0_rgba(0,0,0,0.18)]"
           />
+          <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2">
+            <div>
+              <Image
+                src="/profile/verified.png"
+                alt="Verified badge"
+                width={36}
+                height={36}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Wallet address + disconnect */}
@@ -158,7 +169,12 @@ export default function Profile() {
         {/* Stats grid */}
         <div className="mt-8 grid grid-cols-2 gap-4 w-80 max-w-sm">
           <div className="flex flex-col items-center justify-center rounded-2xl shadow-sm border border-gray-100 bg-white aspect-square">
-            <Image src="/profile/total-charge.png" alt="Total Charge" width={40} height={40} />
+            <Image
+              src="/profile/total-charge.png"
+              alt="Total Charge"
+              width={40}
+              height={40}
+            />
             <p className="mt-4 text-sm font-medium text-gray-700 text-center">
               Total Charge (kWh)
             </p>
@@ -168,7 +184,12 @@ export default function Profile() {
           </div>
 
           <div className="flex flex-col items-center justify-center rounded-2xl shadow-sm border border-gray-100 bg-white aspect-square">
-            <Image src="/profile/co2.png" alt="Offset CO2" width={40} height={40} />
+            <Image
+              src="/profile/co2.png"
+              alt="Offset CO2"
+              width={40}
+              height={40}
+            />
             <p className="mt-4 text-sm font-medium text-gray-700 text-center">
               Offset CO2 (kg)
             </p>
@@ -178,7 +199,12 @@ export default function Profile() {
           </div>
 
           <div className="flex flex-col items-center justify-center rounded-2xl shadow-sm border border-gray-100 bg-white aspect-square">
-            <Image src="/profile/invest.png" alt="Invest" width={40} height={40} />
+            <Image
+              src="/profile/invest.png"
+              alt="Invest"
+              width={40}
+              height={40}
+            />
             <p className="mt-4 text-sm font-medium text-gray-700 text-center">
               Invest (HBAR)
             </p>
@@ -188,7 +214,12 @@ export default function Profile() {
           </div>
 
           <div className="flex flex-col items-center justify-center rounded-2xl shadow-sm border border-gray-100 bg-white aspect-square">
-            <Image src="/profile/earning.png" alt="Earnings" width={40} height={40} />
+            <Image
+              src="/profile/earning.png"
+              alt="Earnings"
+              width={40}
+              height={40}
+            />
             <p className="mt-4 text-sm font-medium text-gray-700 text-center">
               Earnings (HBAR)
             </p>
