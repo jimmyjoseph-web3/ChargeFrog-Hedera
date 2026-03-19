@@ -8,11 +8,13 @@ function buildOpenApiSpec(serverUrl, options = {}) {
   ];
   let runtimeEnv = '';
   for (const candidate of envCandidates) {
-    const normalized = String(candidate || '').trim().toLowerCase();
+    const normalized = String(candidate || '')
+      .trim()
+      .toLowerCase();
     if (!normalized) continue;
     if (normalized === 'dev') {
       runtimeEnv = 'development';
-      break;
+      break; 
     }
     if (normalized === 'prod') {
       runtimeEnv = 'production';
@@ -33,6 +35,9 @@ function buildOpenApiSpec(serverUrl, options = {}) {
     tags.push(
       { name: 'Contracts' },
       { name: 'ATS' },
+      { name: 'Guardian Operations' },
+      { name: 'Guardian Policies' },
+      { name: 'Guardian Schema' },
       { name: 'Discovery' },
       { name: 'MiniNodes' },
       { name: 'Stations' },
@@ -75,8 +80,7 @@ function buildOpenApiSpec(serverUrl, options = {}) {
                       stationMetadata: 'meta-test-endpoint',
                       registryAddress:
                         '0xE690102867901aaF25F960E95E65421e1cC78b07',
-                      boltAddress:
-                        '0x173E5D299fFECaE7856504164a157506859F486f',
+                      boltAddress: '0x173E5D299fFECaE7856504164a157506859F486f',
                     },
                   },
                 },
@@ -149,422 +153,7 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
-      '/api/discovery/poi': {
-        get: {
-          tags: ['Discovery'],
-          summary:
-            'GET alias: resolve area/lat-lon to nearby POIs (q/query + optional radius/limit)',
-          parameters: [
-            { in: 'query', name: 'area', schema: { type: 'string' } },
-            { in: 'query', name: 'q', schema: { type: 'string' } },
-            { in: 'query', name: 'query', schema: { type: 'string' } },
-            { in: 'query', name: 'lat', schema: { type: 'number' } },
-            { in: 'query', name: 'lon', schema: { type: 'number' } },
-            { in: 'query', name: 'radius', schema: { type: 'integer' } },
-            { in: 'query', name: 'limit', schema: { type: 'integer' } },
-          ],
-          responses: {
-            200: {
-              description: 'POI results',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-        post: {
-          tags: ['Discovery'],
-          summary:
-            'Step 1: Find POIs from area/lat-lon, then use returned chargingAvailabilityId in step 2',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/DiscoveryAreaRequest' },
-                examples: {
-                  cityBiasSearch: {
-                    summary: 'City search (recommended first call)',
-                    value: {
-                      area: 'Nottingham',
-                      query: 'ev charging station',
-                      limit: 20,
-                    },
-                  },
-                  radiusSearch: {
-                    summary: 'Hard radius filter search',
-                    value: {
-                      area: 'Nottingham',
-                      radius: 10000,
-                      query: 'ev charging station',
-                      limit: 20,
-                    },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'POI results',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/discovery/charging-stations': {
-        post: {
-          tags: ['Discovery'],
-          summary:
-            'Step 2: Get EV charging availability using chargingAvailabilityId(s) from /api/discovery/poi',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/DiscoveryChargingAvailabilityRequest',
-                },
-                examples: {
-                  singleId: {
-                    summary: 'Single chargingAvailabilityId',
-                    value: {
-                      chargingAvailabilityId: 'XXX*YYY*ZZZ',
-                    },
-                  },
-                  batchIds: {
-                    summary: 'Batch chargingAvailabilityIds',
-                    value: {
-                      chargingAvailabilityIds: ['XXX*YYY*ZZZ', 'AAA*BBB*CCC'],
-                    },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Charging station results',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/ev/chargingAvailability': {
-        get: {
-          tags: ['Discovery'],
-          summary:
-            'GET alias: charging availability lookup by chargingAvailabilityId or comma-separated chargingAvailabilityIds',
-          parameters: [
-            {
-              in: 'query',
-              name: 'chargingAvailabilityId',
-              schema: { type: 'string' },
-            },
-            { in: 'query', name: 'id', schema: { type: 'string' } },
-            {
-              in: 'query',
-              name: 'chargingAvailabilityIds',
-              schema: { type: 'string' },
-              description: 'Comma-separated ids',
-            },
-            {
-              in: 'query',
-              name: 'ids',
-              schema: { type: 'string' },
-              description: 'Comma-separated ids',
-            },
-          ],
-          responses: {
-            200: {
-              description: 'Charging station results',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/mini-nodes': {
-        post: {
-          tags: ['MiniNodes'],
-          summary:
-            'Create a mini-node document (geo + walletAddress + timestamp)',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/MiniNodeCreateRequest' },
-                examples: {
-                  basic: {
-                    value: {
-                      lat: 1.299264,
-                      lon: 103.788009,
-                      walletAddress: '0.0.xxxxxxxx',
-                      timestamp: '2026-02-26T08:00:00.000Z',
-                    },
-                  },
-                  hedera: {
-                    value: {
-                      lat: 1.299264,
-                      lon: 103.788009,
-                      walletAddress: '0.0.xxxxxxxx',
-                      timestamp: '2026-02-26T08:00:00.000Z',
-                    },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Mini-node saved',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/mini-nodes/neighborhood': {
-        get: {
-          tags: ['MiniNodes'],
-          summary:
-            'GET alias: count mini-nodes around lat/lon using radiusMiles (default 25) or radiusMeters',
-          parameters: [
-            {
-              in: 'query',
-              name: 'lat',
-              required: true,
-              schema: { type: 'number' },
-            },
-            {
-              in: 'query',
-              name: 'lon',
-              required: true,
-              schema: { type: 'number' },
-            },
-            { in: 'query', name: 'radiusMiles', schema: { type: 'number' } },
-            { in: 'query', name: 'radiusMeters', schema: { type: 'integer' } },
-            { in: 'query', name: 'threshold', schema: { type: 'integer' } },
-            {
-              in: 'query',
-              name: 'triggerThreshold',
-              schema: { type: 'integer' },
-            },
-            {
-              in: 'query',
-              name: 'lookbackMinutes',
-              schema: { type: 'number' },
-            },
-            { in: 'query', name: 'since', schema: { type: 'string' } },
-            { in: 'query', name: 'until', schema: { type: 'string' } },
-          ],
-          responses: {
-            200: {
-              description: 'Neighborhood count result',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-        post: {
-          tags: ['MiniNodes'],
-          summary:
-            'Count mini-nodes around a requested lat/lon neighborhood and return centroid POI candidate',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/MiniNodeNeighborhoodRequest',
-                },
-                examples: {
-                  targeted: {
-                    value: {
-                      lat: 1.299264,
-                      lon: 103.788009,
-                      radiusMeters: 1200,
-                      triggerThreshold: 20,
-                    },
-                  },
-                  withLookback: {
-                    value: {
-                      lat: 1.299264,
-                      lon: 103.788009,
-                      radiusMeters: 1200,
-                      lookbackMinutes: 1440,
-                      triggerThreshold: 20,
-                    },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Neighborhood count result',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/stations/available': {
-        get: {
-          tags: ['Stations'],
-          summary: 'List stations currently in investment stage',
-          responses: {
-            200: {
-              description: 'Investable stations list',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/stations/{stationId}': {
-        get: {
-          tags: ['Stations'],
-          summary: 'Get station details by stationId',
-          parameters: [
-            {
-              in: 'path',
-              name: 'stationId',
-              required: true,
-              schema: { type: 'integer', minimum: 1 },
-            },
-          ],
-          responses: {
-            200: {
-              description: 'Station details',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/mint': {
-        post: {
-          tags: ['ATS'],
-          summary: 'Mint tokens to a target account',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/MintIssueRequest' },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Mint transaction submitted',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/issue': {
-        post: {
-          tags: ['ATS'],
-          summary: 'Issue tokens to a target account',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/MintIssueRequest' },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Issue transaction submitted',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-      '/api/balance': {
-        post: {
-          tags: ['ATS'],
-          summary: 'Get token balance for an account',
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/BalanceRequest' },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Current balance',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/SuccessResponse' },
-                },
-              },
-            },
-            400: { $ref: '#/components/responses/BadRequest' },
-            500: { $ref: '#/components/responses/InternalError' },
-          },
-        },
-      },
-            '/api/guardian/createPolicy': {
+      '/api/guardian/createPolicy': {
         post: {
           tags: ['Guardian Policies'],
           summary: 'Create Guardian policy via URL + /policies/push',
@@ -1133,6 +722,464 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
+      '/api/guardian/token-associate': {
+        post: {
+          tags: ['Guardian Operations'],
+          summary:
+            'Associate token(s) using regular Hedera SDK TokenAssociateTransaction (no Guardian block)',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/GuardianTokenAssociateRequest',
+                },
+                examples: {
+                  single: {
+                    value: {
+                      accountId: '0.0.7098424',
+                      tokenId: '0.0.8061310',
+                    },
+                  },
+                  multiple: {
+                    value: {
+                      accountId: '0.0.7098424',
+                      tokenIds: ['0.0.8061310', '0.0.8061316'],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Token association submitted',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/discovery/poi': {
+        get: {
+          tags: ['Discovery'],
+          summary:
+            'GET alias: resolve area/lat-lon to nearby POIs (q/query + optional radius/limit)',
+          parameters: [
+            { in: 'query', name: 'area', schema: { type: 'string' } },
+            { in: 'query', name: 'q', schema: { type: 'string' } },
+            { in: 'query', name: 'query', schema: { type: 'string' } },
+            { in: 'query', name: 'lat', schema: { type: 'number' } },
+            { in: 'query', name: 'lon', schema: { type: 'number' } },
+            { in: 'query', name: 'radius', schema: { type: 'integer' } },
+            { in: 'query', name: 'limit', schema: { type: 'integer' } },
+          ],
+          responses: {
+            200: {
+              description: 'POI results',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+        post: {
+          tags: ['Discovery'],
+          summary:
+            'Step 1: Find POIs from area/lat-lon, then use returned chargingAvailabilityId in step 2',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DiscoveryAreaRequest' },
+                examples: {
+                  cityBiasSearch: {
+                    summary: 'City search (recommended first call)',
+                    value: {
+                      area: 'Nottingham',
+                      query: 'ev charging station',
+                      limit: 20,
+                    },
+                  },
+                  radiusSearch: {
+                    summary: 'Hard radius filter search',
+                    value: {
+                      area: 'Nottingham',
+                      radius: 10000,
+                      query: 'ev charging station',
+                      limit: 20,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'POI results',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/discovery/charging-stations': {
+        post: {
+          tags: ['Discovery'],
+          summary:
+            'Step 2: Get EV charging availability using chargingAvailabilityId(s) from /api/discovery/poi',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/DiscoveryChargingAvailabilityRequest',
+                },
+                examples: {
+                  singleId: {
+                    summary: 'Single chargingAvailabilityId',
+                    value: {
+                      chargingAvailabilityId: 'XXX*YYY*ZZZ',
+                    },
+                  },
+                  batchIds: {
+                    summary: 'Batch chargingAvailabilityIds',
+                    value: {
+                      chargingAvailabilityIds: ['XXX*YYY*ZZZ', 'AAA*BBB*CCC'],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Charging station results',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/ev/chargingAvailability': {
+        get: {
+          tags: ['Discovery'],
+          summary:
+            'GET alias: charging availability lookup by chargingAvailabilityId or comma-separated chargingAvailabilityIds',
+          parameters: [
+            {
+              in: 'query',
+              name: 'chargingAvailabilityId',
+              schema: { type: 'string' },
+            },
+            { in: 'query', name: 'id', schema: { type: 'string' } },
+            {
+              in: 'query',
+              name: 'chargingAvailabilityIds',
+              schema: { type: 'string' },
+              description: 'Comma-separated ids',
+            },
+            {
+              in: 'query',
+              name: 'ids',
+              schema: { type: 'string' },
+              description: 'Comma-separated ids',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Charging station results',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/mini-nodes': {
+        post: {
+          tags: ['MiniNodes'],
+          summary:
+            'Create a mini-node document (geo + walletAddress + timestamp)',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MiniNodeCreateRequest' },
+                examples: {
+                  basic: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      walletAddress: '0.0.xxxxxxxx',
+                      timestamp: '2026-02-26T08:00:00.000Z',
+                    },
+                  },
+                  hedera: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      walletAddress: '0.0.xxxxxxxx',
+                      timestamp: '2026-02-26T08:00:00.000Z',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Mini-node saved',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/mini-nodes/neighborhood': {
+        get: {
+          tags: ['MiniNodes'],
+          summary:
+            'GET alias: count mini-nodes around lat/lon using radiusMiles (default 25) or radiusMeters',
+          parameters: [
+            {
+              in: 'query',
+              name: 'lat',
+              required: true,
+              schema: { type: 'number' },
+            },
+            {
+              in: 'query',
+              name: 'lon',
+              required: true,
+              schema: { type: 'number' },
+            },
+            { in: 'query', name: 'radiusMiles', schema: { type: 'number' } },
+            { in: 'query', name: 'radiusMeters', schema: { type: 'integer' } },
+            { in: 'query', name: 'threshold', schema: { type: 'integer' } },
+            {
+              in: 'query',
+              name: 'triggerThreshold',
+              schema: { type: 'integer' },
+            },
+            {
+              in: 'query',
+              name: 'lookbackMinutes',
+              schema: { type: 'number' },
+            },
+            { in: 'query', name: 'since', schema: { type: 'string' } },
+            { in: 'query', name: 'until', schema: { type: 'string' } },
+          ],
+          responses: {
+            200: {
+              description: 'Neighborhood count result',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+        post: {
+          tags: ['MiniNodes'],
+          summary:
+            'Count mini-nodes around a requested lat/lon neighborhood and return centroid POI candidate',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/MiniNodeNeighborhoodRequest',
+                },
+                examples: {
+                  targeted: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      radiusMeters: 1200,
+                      triggerThreshold: 20,
+                    },
+                  },
+                  withLookback: {
+                    value: {
+                      lat: 1.299264,
+                      lon: 103.788009,
+                      radiusMeters: 1200,
+                      lookbackMinutes: 1440,
+                      triggerThreshold: 20,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Neighborhood count result',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/stations/available': {
+        get: {
+          tags: ['Stations'],
+          summary: 'List stations currently in investment stage',
+          responses: {
+            200: {
+              description: 'Investable stations list',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/stations/{stationId}': {
+        get: {
+          tags: ['Stations'],
+          summary: 'Get station details by stationId',
+          parameters: [
+            {
+              in: 'path',
+              name: 'stationId',
+              required: true,
+              schema: { type: 'integer', minimum: 1 },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Station details',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/mint': {
+        post: {
+          tags: ['ATS'],
+          summary: 'Mint tokens to a target account',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MintIssueRequest' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Mint transaction submitted',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/issue': {
+        post: {
+          tags: ['ATS'],
+          summary: 'Issue tokens to a target account',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MintIssueRequest' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Issue transaction submitted',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
+      '/api/balance': {
+        post: {
+          tags: ['ATS'],
+          summary: 'Get token balance for an account',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BalanceRequest' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Current balance',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
       '/api/agent/froggy-planner': {
         post: {
           tags: ['Agent'],
@@ -1207,6 +1254,54 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
+      '/api/agent/froggy-guardian': {
+        post: {
+          tags: ['Agent'],
+          summary:
+            'Guardian chat agent for policy enquiries and fully-invested station policy creation workflow',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/GuardianAgentChatRequest',
+                },
+                examples: {
+                  policyEnquiry: {
+                    value: {
+                      message:
+                        'show me the guardian policy for Madison Square Garden',
+                    },
+                  },
+                  listFullyInvested: {
+                    value: {
+                      message: 'what stations have been fully-invested',
+                    },
+                  },
+                  createPolicies: {
+                    value: {
+                      message:
+                        'yes create guardian policy and schema for Madison Square Garden New York',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Guardian chat response',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/SuccessResponse' },
+                },
+              },
+            },
+            400: { $ref: '#/components/responses/BadRequest' },
+            500: { $ref: '#/components/responses/InternalError' },
+          },
+        },
+      },
       '/.well-known/froggy-planner-agent.json': {
         get: {
           tags: ['A2A'],
@@ -1230,6 +1325,38 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           responses: {
             200: {
               description: 'A2A agent card metadata',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/.well-known/froggy-guardian-agent.json': {
+        get: {
+          tags: ['A2A'],
+          summary: 'FroggyGuardian A2A discovery document',
+          responses: {
+            200: {
+              description: 'Guardian A2A agent discovery metadata',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/.well-known/froggy-guardian-agent-card.json': {
+        get: {
+          tags: ['A2A'],
+          summary: 'FroggyGuardian A2A agent card',
+          responses: {
+            200: {
+              description: 'Guardian A2A agent card metadata',
               content: {
                 'application/json': {
                   schema: { type: 'object', additionalProperties: true },
@@ -1265,6 +1392,239 @@ function buildOpenApiSpec(serverUrl, options = {}) {
               content: {
                 'application/json': {
                   schema: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/.well-known/froggychat-agent.json': {
+        get: {
+          tags: ['A2A'],
+          summary: 'FroggyChat A2A discovery document',
+          responses: {
+            200: {
+              description: 'FroggyChat A2A discovery metadata',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/.well-known/froggychat-agent-card.json': {
+        get: {
+          tags: ['A2A'],
+          summary: 'FroggyChat A2A agent card',
+          responses: {
+            200: {
+              description: 'FroggyChat A2A agent card metadata',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/a2a/froggy-chat': {
+        post: {
+          tags: ['A2A'],
+          summary:
+            'ChargeFrog FroggyChat A2A endpoint that routes to planner, foundry, or guardian by intent',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  additionalProperties: true,
+                },
+                examples: {
+                  investmentMessage: {
+                    value: {
+                      jsonrpc: '2.0',
+                      id: '1',
+                      method: 'message/send',
+                      params: {
+                        message: {
+                          messageId: 'froggychat-msg-1',
+                          role: 'user',
+                          parts: [
+                            {
+                              text: 'Can you list any available stations for me to invest in?',
+                            },
+                          ],
+                          metadata: {
+                            walletAddress: '0.0.xxxxxxxx',
+                          },
+                        },
+                      },
+                    },
+                  },
+                  foundryMessage: {
+                    value: {
+                      jsonrpc: '2.0',
+                      id: '2',
+                      method: 'message/send',
+                      params: {
+                        message: {
+                          messageId: 'froggychat-msg-2',
+                          role: 'user',
+                          parts: [
+                            {
+                              text: 'Which stations require my attention?',
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  guardianMessage: {
+                    value: {
+                      jsonrpc: '2.0',
+                      id: '3',
+                      method: 'message/send',
+                      params: {
+                        message: {
+                          messageId: 'froggychat-msg-3',
+                          role: 'user',
+                          parts: [
+                            {
+                              text: 'Show me the guardian policy for Madison Square Garden',
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'FroggyChat A2A JSON-RPC response',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                  examples: {
+                    completedTask: {
+                      value: {
+                        jsonrpc: '2.0',
+                        id: '2',
+                        result: {
+                          id: 'froggychat-task-id',
+                          contextId: 'froggychat-context-id',
+                          kind: 'task',
+                          status: {
+                            state: 'completed',
+                            message: {
+                              kind: 'message',
+                              messageId: 'froggychat-agent-message-id',
+                              contextId: 'froggychat-context-id',
+                              taskId: 'froggychat-task-id',
+                              role: 'agent',
+                              parts: [
+                                {
+                                  kind: 'text',
+                                  text: 'The station requiring your attention is station 8 (ChargeFrog Station - Madison Square Garden) proposal proposal_1741856400000_abc123def4; would you like to approve this station, this would mean deployment on hedera testnet through the chargefrog contracts, and the creation of equity and bond stations',
+                                },
+                              ],
+                              metadata: {
+                                a2a: true,
+                                endpoint: '/a2a/froggy-chat',
+                                status: 'pending_admin_action_queue',
+                              },
+                            },
+                          },
+                          artifacts: [
+                            {
+                              artifactId: 'froggychat-artifact-id',
+                              name: 'froggychat-result',
+                              description:
+                                'Structured result from ChargeFrog FroggyChat',
+                              parts: [
+                                {
+                                  kind: 'data',
+                                  data: {
+                                    status: 'pending_admin_action_queue',
+                                    routedAgentKey: 'foundry',
+                                    routedAgentName: 'FroggyFoundry',
+                                    routedAgentEndpoint: '/a2a/froggy-foundry',
+                                    routeReason: 'foundry_intent',
+                                    trail: [
+                                      {
+                                        stage: 'received',
+                                        agentKey: 'froggychat',
+                                        agentName: 'FroggyChat',
+                                        endpointPath: '/a2a/froggy-chat',
+                                        message:
+                                          'Which stations require my attention?',
+                                        success: true,
+                                        at: '2026-03-17T10:00:00.000Z',
+                                      },
+                                      {
+                                        stage: 'routed',
+                                        agentKey: 'foundry',
+                                        agentName: 'FroggyFoundry',
+                                        endpointPath: '/a2a/froggy-foundry',
+                                        reason: 'foundry_intent',
+                                        success: true,
+                                        at: '2026-03-17T10:00:00.010Z',
+                                      },
+                                      {
+                                        stage: 'a2a_call_started',
+                                        transport: 'a2a_http_external',
+                                        callerAgentKey: 'froggychat',
+                                        callerAgentName: 'FroggyChat',
+                                        callerEndpointPath: '/a2a/froggy-chat',
+                                        calleeAgentKey: 'foundry',
+                                        calleeAgentName: 'FroggyFoundry',
+                                        calleeEndpointPath:
+                                          '/a2a/froggy-foundry',
+                                        message:
+                                          'Which stations require my attention?',
+                                        success: true,
+                                        at: '2026-03-17T10:00:00.011Z',
+                                      },
+                                      {
+                                        stage: 'a2a_call_completed',
+                                        agentKey: 'foundry',
+                                        agentName: 'FroggyFoundry',
+                                        endpointPath: '/a2a/froggy-foundry',
+                                        transport: 'a2a_http_external',
+                                        callerAgentKey: 'froggychat',
+                                        callerAgentName: 'FroggyChat',
+                                        callerEndpointPath: '/a2a/froggy-chat',
+                                        calleeAgentKey: 'foundry',
+                                        calleeAgentName: 'FroggyFoundry',
+                                        calleeEndpointPath:
+                                          '/a2a/froggy-foundry',
+                                        status: 'pending_admin_action_queue',
+                                        success: true,
+                                        at: '2026-03-17T10:00:00.320Z',
+                                        durationMs: 309,
+                                      },
+                                    ],
+                                    reply:
+                                      'The station requiring your attention is station 8 (ChargeFrog Station - Madison Square Garden) proposal proposal_1741856400000_abc123def4; would you like to approve this station, this would mean deployment on hedera testnet through the chargefrog contracts, and the creation of equity and bond stations',
+                                  },
+                                },
+                              ],
+                            },
+                          ],
+                          metadata: {
+                            source: 'chargefrog-froggychat',
+                            status: 'pending_admin_action_queue',
+                          },
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -1540,6 +1900,127 @@ function buildOpenApiSpec(serverUrl, options = {}) {
           },
         },
       },
+      '/a2a/froggy-guardian': {
+        post: {
+          tags: ['A2A'],
+          summary: 'Guardian A2A JSON-RPC endpoint',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  additionalProperties: true,
+                },
+                examples: {
+                  sendMessage: {
+                    value: {
+                      jsonrpc: '2.0',
+                      id: '1',
+                      method: 'message/send',
+                      params: {
+                        message: {
+                          messageId: 'guardian-msg-1',
+                          role: 'user',
+                          parts: [
+                            {
+                              text: 'show me the guardian policy for Madison Square Garden',
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  getTask: {
+                    value: {
+                      jsonrpc: '2.0',
+                      id: '2',
+                      method: 'tasks/get',
+                      params: {
+                        id: 'task-id-from-message-send',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Guardian A2A JSON-RPC response',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', additionalProperties: true },
+                  examples: {
+                    completedTask: {
+                      value: {
+                        jsonrpc: '2.0',
+                        id: '1',
+                        result: {
+                          id: 'guardian-task-id',
+                          contextId: 'guardian-context-id',
+                          kind: 'task',
+                          status: {
+                            state: 'completed',
+                            message: {
+                              kind: 'message',
+                              messageId: 'guardian-agent-message-id',
+                              contextId: 'guardian-context-id',
+                              taskId: 'guardian-task-id',
+                              role: 'agent',
+                              parts: [
+                                {
+                                  kind: 'text',
+                                  text: 'There is 1 fully-invested station ready for Guardian policy and schema creation: station 1: ChargeFrog Station - Madison Square Garden New York (fully-invested).',
+                                },
+                              ],
+                              metadata: {
+                                a2a: true,
+                                endpoint: '/a2a/froggy-guardian',
+                                intent: 'LIST_FULLY_INVESTED_STATIONS',
+                              },
+                            },
+                          },
+                          artifacts: [
+                            {
+                              artifactId: 'guardian-artifact-id',
+                              name: 'guardian-result',
+                              description:
+                                'Structured result from ChargeFrog Guardian',
+                              parts: [
+                                {
+                                  kind: 'data',
+                                  data: {
+                                    intent: 'LIST_FULLY_INVESTED_STATIONS',
+                                    reply:
+                                      'I found 1 fully-invested station that is ready for Guardian policy and schema creation so the station can move closer to going live: ChargeFrog Station - Madison Square Garden New York (stationId 1).',
+                                    stations: [
+                                      {
+                                        stationId: 1,
+                                        stationName:
+                                          'ChargeFrog Station - Madison Square Garden New York',
+                                        stage: 'fully-invested',
+                                      },
+                                    ],
+                                  },
+                                },
+                              ],
+                            },
+                          ],
+                          metadata: {
+                            source: 'chargefrog-guardian',
+                            intent: 'LIST_FULLY_INVESTED_STATIONS',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     components: {
       responses: {
@@ -1561,7 +2042,7 @@ function buildOpenApiSpec(serverUrl, options = {}) {
         },
       },
       schemas: {
-                GuardianSchemaPushRequest: {
+        GuardianSchemaPushRequest: {
           type: 'object',
           properties: {
             payload: {
@@ -2272,11 +2753,24 @@ function buildOpenApiSpec(serverUrl, options = {}) {
             stationId: {
               type: 'string',
               example: '12',
-              description:
-                'Alias of expectedStationId.',
+              description: 'Alias of expectedStationId.',
             },
           },
           anyOf: [{ required: ['message'] }, { required: ['proposalId'] }],
+          additionalProperties: false,
+        },
+        GuardianAgentChatRequest: {
+          type: 'object',
+          properties: {
+            message: {
+              type: 'string',
+              example:
+                'show me the guardian policy for ChargeFrog Station - Madison Square Garden',
+              description:
+                'Supports per-station Guardian policy enquiry, listing fully-invested stations, and confirming Guardian policy creation by station name.',
+            },
+          },
+          required: ['message'],
           additionalProperties: false,
         },
         SuccessResponse: {
@@ -2299,28 +2793,100 @@ function buildOpenApiSpec(serverUrl, options = {}) {
     },
   };
 
+  if (!includeTestingRoutes) {
+    const allowedPaths = new Set([
+      '/.well-known/froggychat-agent.json',
+      '/.well-known/froggychat-agent-card.json',
+      '/.well-known/froggy-planner-agent.json',
+      '/.well-known/froggy-planner-agent-card.json',
+      '/.well-known/froggy-foundry-agent.json',
+      '/.well-known/froggy-foundry-agent-card.json',
+      '/.well-known/froggy-guardian-agent.json',
+      '/.well-known/froggy-guardian-agent-card.json',
+      '/a2a/froggy-chat',
+      '/a2a/froggy-planner',
+      '/a2a/froggy-foundry',
+      '/a2a/froggy-guardian',
+    ]);
+    spec.paths = Object.fromEntries(
+      Object.entries(spec.paths).filter(([path]) => allowedPaths.has(path)),
+    );
+  }
+
+  const usedTags = new Set();
+  for (const operations of Object.values(spec.paths)) {
+    for (const operation of Object.values(operations)) {
+      for (const tag of operation.tags || []) {
+        usedTags.add(tag);
+      }
+    }
+  }
+  spec.tags = spec.tags.filter((tag) => usedTags.has(tag.name));
+
   return spec;
 }
 
-function getDocsHtml() {
+function getDocsHtml(options = {}) {
+  const title = String(options.title || 'Froggy Planner API Docs');
+  const specUrl = String(options.specUrl || '/openapi.json');
+  const navLinks = Array.isArray(options.navLinks) ? options.navLinks : [];
+  const navLinksHtml = navLinks.length
+    ? `<div class="docs-nav">${navLinks
+        .map(
+          (link) =>
+            `<a class="docs-nav-link" href="${String(link.href || '#')}">${String(link.label || link.href || '')}</a>`,
+        )
+        .join('')}</div>`
+    : '';
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Froggy Planner API Docs</title>
+    <title>${title}</title>
     <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
     <style>
       html, body { margin: 0; background: #f7f9fc; }
+      body { font-family: Arial, sans-serif; color: #132238; }
+      .docs-toolbar {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 16px 20px 0;
+      }
+      .docs-nav {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 16px 20px 0;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .docs-nav-link {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid #d6dfeb;
+        border-radius: 999px;
+        background: #ffffff;
+        color: #17324d;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        box-shadow: 0 6px 18px rgba(19, 34, 56, 0.05);
+      }
       #swagger-ui { max-width: 1200px; margin: 0 auto; }
+      @media (max-width: 640px) {
+        .docs-nav { padding: 12px 12px 0; }
+      }
     </style>
   </head>
   <body>
+    ${navLinksHtml}
     <div id="swagger-ui"></div>
     <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
     <script>
       window.ui = SwaggerUIBundle({
-        url: '/openapi.json',
+        url: '${specUrl}',
         dom_id: '#swagger-ui',
         deepLinking: true,
       });

@@ -1,5 +1,6 @@
 const { randomUUID } = require('crypto');
 const { PUBLIC_A2A_AGENT_METADATA } = require('./publicAgentMetadata');
+const { applyAgentTrail } = require('../lib/workflowTrail');
 
 const A2A_PROTOCOL_VERSION = '0.3.0';
 const A2A_TASKS = new Map();
@@ -713,9 +714,10 @@ async function handleMessageSend(params, agentConfig, runner) {
   }
 
   const walletAddress = extractWalletAddress(params);
-  const result = await runner(
+  const rawResult = await runner(
     agentConfig.runnerInputBuilder({ text, data, walletAddress, params, message }),
   );
+  const result = applyAgentTrail(agentConfig.key, rawResult);
 
   const reply = resultToReplyText(result);
 
