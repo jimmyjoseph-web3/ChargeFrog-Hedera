@@ -271,13 +271,28 @@ function parseIntentRuleBased(message) {
     return stationSpecificIntent;
   }
 
+  const mentionsStations = /\bstations?\b/.test(text);
+  const asksListing =
+    /\b(list|show|what|which|any|available)\b/.test(text) && mentionsStations;
+  const asksAvailability =
+    /\b(available|investable|currently|right now|open for investment|in investment stage)\b/.test(
+      text,
+    );
+  const asksWhichStationsToInvestIn =
+    asksListing &&
+    mentionsStations &&
+    /\binvest\b/.test(text) &&
+    !/\bnear\b|\baround\b|\bin\s+[a-z]/.test(text);
+
   if (text.includes('issue assets') || text.includes('issue station assets')) {
     return STATE.ISSUE_ASSETS_AFTER_APPROVAL;
   }
   if (
     text.includes('what stations are available') ||
     text.includes('stations available') ||
-    text.includes('available right now')
+    text.includes('available right now') ||
+    (asksListing && asksAvailability) ||
+    asksWhichStationsToInvestIn
   ) {
     return STATE.LIST_AVAILABLE_STATIONS;
   }
