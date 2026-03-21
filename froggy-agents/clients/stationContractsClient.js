@@ -6,6 +6,7 @@ const {
   createPrivateKeySigner,
   normalizePrivateKey,
 } = require('./privateKeyEthereumProvider');
+const embeddedArtifacts = require('./stationContractArtifacts');
 
 const DEFAULT_RPC_NODE_URL = 'https://testnet.hashio.io/api';
 const DEFAULT_REGISTRY_ADDRESS = '0xE690102867901aaF25F960E95E65421e1cC78b07';
@@ -15,23 +16,24 @@ const DEFAULT_PROJECT_URL = 'https://chargefrog.vercel.app/';
 const ARTIFACT_PATHS = Object.freeze({
   Registry: path.resolve(
     __dirname,
-    '../../contracts/artifacts/logic/registry.sol/Registry.json',
+    '../../../contracts/artifacts/logic/registry.sol/Registry.json',
   ),
   Bolt: path.resolve(
     __dirname,
-    '../../contracts/artifacts/logic/bolt.sol/Bolt.json',
+    '../../../contracts/artifacts/logic/bolt.sol/Bolt.json',
   ),
   Station: path.resolve(
     __dirname,
-    '../../contracts/artifacts/logic/station.sol/Station.json',
+    '../../../contracts/artifacts/logic/station.sol/Station.json',
   ),
   Shares: path.resolve(
     __dirname,
-    '../../contracts/artifacts/logic/shares.sol/Shares.json',
+    '../../../contracts/artifacts/logic/shares.sol/Shares.json',
   ),
 });
 
 const artifactCache = new Map();
+const warnedEmbeddedArtifacts = new Set();
 
 function loadEnvFiles() {
   const candidates = [
@@ -69,13 +71,26 @@ function getArtifact(name) {
   if (!artifactPath) {
     throw new Error(`Unknown contract artifact: ${name}`);
   }
-  if (!fs.existsSync(artifactPath)) {
-    throw new Error(`Missing contract artifact: ${artifactPath}`);
+
+  if (fs.existsSync(artifactPath)) {
+    const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
+    artifactCache.set(name, artifact);
+    return artifact;
   }
 
-  const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
-  artifactCache.set(name, artifact);
-  return artifact;
+  const embeddedArtifact = embeddedArtifacts[name];
+  if (embeddedArtifact) {
+    if (!warnedEmbeddedArtifacts.has(name)) {
+      warnedEmbeddedArtifacts.add(name);
+      console.warn(
+        `[stationContractsClient] Local artifact missing at ${artifactPath}; using embedded ${name} artifact fallback.`,
+      );
+    }
+    artifactCache.set(name, embeddedArtifact);
+    return embeddedArtifact;
+  }
+
+  throw new Error(`Missing contract artifact: ${artifactPath}`);
 }
 
 function normalizeAddress(value, label) {
