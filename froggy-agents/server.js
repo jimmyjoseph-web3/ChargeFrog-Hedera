@@ -1,4 +1,6 @@
+const fs = require('fs/promises');
 const http = require('http');
+const path = require('path');
 const { URL } = require('url');
 const {
   createToken,
@@ -11,7 +13,7 @@ const {
   deployStationBundle,
 } = require('./clients/stationContractsClient');
 const { buildOpenApiSpec, getDocsHtml } = require('./http/openapi');
-const { buildWorkflowOpenApiSpec } = require('./http/workflowOpenApi');
+const { buildWorkflowOpenApiSpec } = require('./http/workflowOpenapi');
 const { buildAgentCard, handleA2aJsonRpc } = require('./http/a2a');
 const {
   runAgent,
@@ -113,6 +115,19 @@ const PUBLIC_WELL_KNOWN_ROUTES = Object.freeze(
     return routes;
   }, {}),
 );
+const PUBLIC_IMAGE_ROUTES = Object.freeze(
+  Object.values(PUBLIC_A2A_AGENT_METADATA).reduce((routes, agent) => {
+    if (!agent.profileImagePath || !agent.profileImageFile) {
+      return routes;
+    }
+
+    routes[agent.profileImagePath] = {
+      filePath: path.resolve(__dirname, 'docs', agent.profileImageFile),
+      contentType: 'image/png',
+    };
+    return routes;
+  }, {}),
+);
 
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -144,6 +159,16 @@ function sendHtml(res, statusCode, html) {
   setCorsHeaders(res);
   res.writeHead(statusCode, { 'Content-Type': 'text/html; charset=utf-8' });
   res.end(html);
+}
+
+async function sendFile(res, statusCode, filePath, contentType) {
+  setCorsHeaders(res);
+  const body = await fs.readFile(filePath);
+  res.writeHead(statusCode, {
+    'Content-Type': contentType,
+    'Cache-Control': 'public, max-age=300',
+  });
+  res.end(body);
 }
 
 function sendNoContent(res) {
@@ -446,6 +471,19 @@ const server = http.createServer(async (req, res) => {
       200,
       buildAgentCard(makeServerUrl(req), PUBLIC_WELL_KNOWN_ROUTES[pathname]),
     );
+  }
+
+  if (req.method === 'GET' && PUBLIC_IMAGE_ROUTES[pathname]) {
+    try {
+      const asset = PUBLIC_IMAGE_ROUTES[pathname];
+      return await sendFile(res, 200, asset.filePath, asset.contentType);
+    } catch (error) {
+      return sendJson(res, 404, {
+        ok: false,
+        error:
+          error && error.message ? error.message : 'Image asset not found',
+      });
+    }
   }
 
   if (req.method === 'POST' && pathname === '/a2a/froggy-planner') {

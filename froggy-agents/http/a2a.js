@@ -141,17 +141,24 @@ function buildAgentSkill({
   };
 }
 
+function resolvePublicUrl(baseUrl, value) {
+  if (!value) return null;
+  return /^https?:\/\//i.test(value) ? value : `${baseUrl}${value}`;
+}
+
 function buildAgentCard(baseUrl, agentKey = 'planner') {
   const agent = resolveAgentConfig(agentKey);
   const documentationUrl = /^https?:\/\//i.test(agent.documentationUrl || '')
     ? agent.documentationUrl
     : `${baseUrl}${agent.documentationUrl || '/docs'}`;
   const serviceEndpoint = `${baseUrl}${agent.endpointPath}`;
+  const profileImage = resolvePublicUrl(baseUrl, agent.profileImage);
   return {
     id: agent.key,
     protocolVersion: A2A_PROTOCOL_VERSION,
     name: agent.name,
     description: agent.description,
+    ...(profileImage ? { profileImage } : {}),
     url: serviceEndpoint,
     serviceEndpoint,
     endpoints: {
@@ -162,6 +169,7 @@ function buildAgentCard(baseUrl, agentKey = 'planner') {
     provider: {
       organization: 'ChargeFrog',
       url: baseUrl,
+      ...(profileImage ? { icon: profileImage } : {}),
     },
     capabilities: {
       streaming: false,

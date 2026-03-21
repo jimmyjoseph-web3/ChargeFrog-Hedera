@@ -250,6 +250,9 @@ async function resolveValidatedAdditionalRegistries(client, agentKey) {
  */
 function buildHcs11Profile(agentKey, runtime) {
   const config = getAgentConfig(agentKey);
+  const profileImage = /^https?:\/\//i.test(config.profileImage || '')
+    ? config.profileImage
+    : `${runtime.publicBaseUrl}${config.profileImage || ''}`;
   /** @type {HCS11Profile} */
   const profile = {
     version: '1.0',
@@ -258,12 +261,14 @@ function buildHcs11Profile(agentKey, runtime) {
     alias: runtime.alias,
     bio: config.description,
     socials: buildPublicAgentSocials(runtime.publicBaseUrl),
+    ...(profileImage ? { profileImage } : {}),
     properties: {
       tags: config.tags,
       documentationUrl: config.documentationUrl,
       discoveryUrl: `${runtime.publicBaseUrl}${config.discoveryPath}`,
       agentCardUrl: `${runtime.publicBaseUrl}${config.agentCardPath}`,
       endpointUrl: `${runtime.publicBaseUrl}${config.endpointPath}`,
+      ...(profileImage ? { profileImage } : {}),
       category: config.category,
       source: config.source,
     },
@@ -292,6 +297,9 @@ function buildRegistrationPayload(profile, agentKey, options = {}) {
   const discoveryUrl = `${publicBaseUrl}${config.discoveryPath}`;
   const agentCardUrl = `${publicBaseUrl}${config.agentCardPath}`;
   const documentationUrl = config.documentationUrl;
+  const profileImage = /^https?:\/\//i.test(config.profileImage || '')
+    ? config.profileImage
+    : `${publicBaseUrl}${config.profileImage || ''}`;
 
   /** @type {AgentRegistrationRequest} */
   const payload = {
@@ -309,6 +317,7 @@ function buildRegistrationPayload(profile, agentKey, options = {}) {
       serviceEndpoint,
       discoveryUrl,
       agentCardUrl,
+      ...(profileImage ? { profileImage } : {}),
       documentationUrl,
       model: config.getModel(),
       tags: config.tags,
@@ -322,6 +331,7 @@ function buildRegistrationPayload(profile, agentKey, options = {}) {
         category: config.category,
         documentationUrl,
         agentCardUrl,
+        ...(profileImage ? { profileImage } : {}),
         discoveryUrl,
         endpointUrl: serviceEndpoint,
         serviceEndpoint,

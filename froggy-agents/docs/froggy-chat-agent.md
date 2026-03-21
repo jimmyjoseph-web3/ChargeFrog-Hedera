@@ -1,33 +1,33 @@
-# FroggyChat Agent
+# ChargeFrog: FroggyChat Agent
 
 ## Overview
 
-FroggyChat is the public A2A routing agent for ChargeFrog. It accepts a ChargeFrog-domain chat request, classifies the intent, and routes the request to the correct hosted public agent.
+ChargeFrog: FroggyChat is the public A2A routing agent for ChargeFrog. It accepts a ChargeFrog-domain chat request, classifies the intent, and routes the request to the correct hosted public agent.
 
 This document is written for the hosted agent surface only.
 
 Hosted base URL:
 
-- `https://froggyplanner.onrender.com`
+- `https://froggyagents.online`
 
 Canonical A2A endpoint:
 
-- `POST https://froggyplanner.onrender.com/a2a/froggy-chat`
+- `POST https://froggyagents.online/a2a/froggy-chat`
 
 Canonical discovery endpoints:
 
-- `GET https://froggyplanner.onrender.com/.well-known/froggychat-agent.json`
-- `GET https://froggyplanner.onrender.com/.well-known/froggychat-agent-card.json`
+- `GET https://froggyagents.online/.well-known/froggychat-agent.json`
+- `GET https://froggyagents.online/.well-known/froggychat-agent-card.json`
 
 ## Purpose
 
-FroggyChat is the public entrypoint for ChargeFrog multi-agent chat.
+ChargeFrog: FroggyChat is the public entrypoint for ChargeFrog multi-agent chat.
 
 It routes incoming requests to one of the hosted public A2A agents:
 
-- FroggyPlanner for station discovery, proposal creation, and investor-facing investment workflows
-- FroggyFoundry for pending admin review, approval, deployment, and post-deployment issuance workflows
-- FroggyGuardian for Guardian policy enquiry and policy creation workflows
+- ChargeFrog: FroggyPlanner for station discovery, proposal creation, and investor-facing investment workflows
+- ChargeFrog: FroggyFoundry for pending admin review, approval, deployment, and post-deployment issuance workflows
+- ChargeFrog: FroggyGuardian for Guardian policy enquiry and policy creation workflows
 
 It also leaves a routing trail in the structured result so callers can see which downstream A2A agent was selected and when the downstream A2A handoff started and finished.
 
@@ -35,7 +35,7 @@ It also leaves a routing trail in the structured result so callers can see which
 
 ### 1. Investor and station workflows
 
-FroggyChat can route investor-facing and planning requests to FroggyPlanner.
+ChargeFrog: FroggyChat can route investor-facing and planning requests to ChargeFrog: FroggyPlanner.
 
 This includes:
 
@@ -54,7 +54,7 @@ Typical requests:
 
 ### 2. Admin review and deployment workflows
 
-FroggyChat can route admin approval and deployment requests to FroggyFoundry.
+ChargeFrog: FroggyChat can route admin approval and deployment requests to ChargeFrog: FroggyFoundry.
 
 This includes:
 
@@ -72,7 +72,7 @@ Typical requests:
 
 ### 3. Guardian policy workflows
 
-FroggyChat can route Guardian-related requests to FroggyGuardian.
+ChargeFrog: FroggyChat can route Guardian-related requests to ChargeFrog: FroggyGuardian.
 
 This includes:
 
@@ -88,11 +88,11 @@ Typical requests:
 
 ### 4. Routing trail visibility
 
-FroggyChat returns a routing trail in the structured result.
+ChargeFrog: FroggyChat returns a routing trail in the structured result.
 
 The trail can show:
 
-- request receipt by FroggyChat
+- request receipt by ChargeFrog: FroggyChat
 - route decision and selected downstream agent
 - downstream A2A call start
 - downstream A2A call completion
@@ -121,7 +121,7 @@ Optional fields:
 
 - `params.message.metadata.walletAddress`
 
-If `walletAddress` is provided, FroggyChat can forward it to the routed planner workflow when investor-facing station investment actions require wallet context.
+If `walletAddress` is provided, ChargeFrog: FroggyChat can forward it to the routed planner workflow when investor-facing station investment actions require wallet context.
 
 Example:
 
@@ -174,24 +174,24 @@ Interpretation:
 
 - `parts[0].text` is the human-readable reply from the routed downstream agent
 - `artifacts[0].parts[0].data` is the structured routed result
-- `artifacts[0].parts[0].data.trail` is the FroggyChat routing and A2A handoff trail
+- `artifacts[0].parts[0].data.trail` is the ChargeFrog: FroggyChat routing and A2A handoff trail
 - `result.id` is the A2A task identifier
 
 ## Authentication And Identity
 
-FroggyChat does not require a wallet address for normal routing.
+ChargeFrog: FroggyChat does not require a wallet address for normal routing.
 
 It does not directly deploy contracts, issue tokens, or create Guardian policies itself. It routes to the appropriate hosted agent for that workflow.
 
 Optional identity context:
 
 - `walletAddress` may be supplied for planner-side investor workflows
-- admin-signing remains a server-side task of FroggyFoundry
-- Guardian execution context remains a server-side task of FroggyGuardian
+- admin-signing remains a server-side task of ChargeFrog: FroggyFoundry
+- Guardian execution context remains a server-side task of ChargeFrog: FroggyGuardian
 
 ## Guardrails And Scope
 
-FroggyChat handles ChargeFrog workflow routing for:
+ChargeFrog: FroggyChat handles ChargeFrog workflow routing for:
 
 - station discovery and investor chat
 - pending admin action and approval flows
@@ -208,19 +208,19 @@ It is a routing and handoff agent, not the final business-logic worker for every
 
 ## Operational Dependencies
 
-FroggyChat depends on:
+ChargeFrog: FroggyChat depends on:
 
-- FroggyPlanner public A2A endpoint
-- FroggyFoundry public A2A endpoint
-- FroggyGuardian public A2A endpoint
+- ChargeFrog: FroggyPlanner public A2A endpoint
+- ChargeFrog: FroggyFoundry public A2A endpoint
+- ChargeFrog: FroggyGuardian public A2A endpoint
 - public-base A2A routing in production, or localhost A2A routing in development
 - the downstream systems and databases used by whichever agent is selected
 
-The public A2A endpoint is a routing surface over downstream A2A delegation logic. In production, FroggyChat calls the routed public agent through the configured public base URL. In development, it uses localhost for the same A2A endpoint path. The downstream business workflow is executed by the routed agent, not by the HTTP route itself.
+The public A2A endpoint is a routing surface over downstream A2A delegation logic. In production, ChargeFrog: FroggyChat calls the routed public agent through the configured public base URL. In development, it uses localhost for the same A2A endpoint path. The downstream business workflow is executed by the routed agent, not by the HTTP route itself.
 
 ## Example Requests
 
-### Route to FroggyPlanner
+### Route to ChargeFrog: FroggyPlanner
 
 ```json
 {
@@ -244,7 +244,7 @@ The public A2A endpoint is a routing surface over downstream A2A delegation logi
 }
 ```
 
-### Route to FroggyFoundry
+### Route to ChargeFrog: FroggyFoundry
 
 ```json
 {
@@ -265,7 +265,7 @@ The public A2A endpoint is a routing surface over downstream A2A delegation logi
 }
 ```
 
-### Route to FroggyGuardian
+### Route to ChargeFrog: FroggyGuardian
 
 ```json
 {
@@ -378,7 +378,7 @@ The public A2A endpoint is a routing surface over downstream A2A delegation logi
 
 ## Registration Notes
 
-This hosted FroggyChat agent is intended to be registered with:
+This hosted ChargeFrog: FroggyChat agent is intended to be registered with:
 
 - `communicationProtocol: "a2a"`
 - HOL as the primary fast-layer registry
@@ -386,8 +386,8 @@ This hosted FroggyChat agent is intended to be registered with:
 
 For HOL and Registry Broker registration, the canonical hosted discovery URL is:
 
-- `https://froggyplanner.onrender.com/.well-known/froggychat-agent.json`
+- `https://froggyagents.online/.well-known/froggychat-agent.json`
 
 The canonical hosted live service endpoint advertised by that discovery document is:
 
-- `https://froggyplanner.onrender.com/a2a/froggy-chat`
+- `https://froggyagents.online/a2a/froggy-chat`

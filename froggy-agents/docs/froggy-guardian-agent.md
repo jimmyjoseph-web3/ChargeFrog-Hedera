@@ -1,27 +1,27 @@
-# FroggyGuardian Agent
+# ChargeFrog: FroggyGuardian Agent
 
 ## Overview
 
-FroggyGuardian is the public A2A coordinator agent for ChargeFrog’s Guardian-facing policy workflows. It handles station-specific Guardian policy enquiry, fully-invested station readiness checks, and the controlled policy-creation workflow for past ChargeFrog stations.
+ChargeFrog: FroggyGuardian is the public A2A coordinator agent for ChargeFrog’s Guardian-facing policy workflows. It handles station-specific Guardian policy enquiry, fully-invested station readiness checks, and the controlled policy-creation workflow for past ChargeFrog stations.
 
 This document is written for the hosted agent surface only.
 
 Hosted base URL:
 
-- `https://froggyplanner.onrender.com`
+- `https://froggyagents.online`
 
 Canonical A2A endpoint:
 
-- `POST https://froggyplanner.onrender.com/a2a/froggy-guardian`
+- `POST https://froggyagents.online/a2a/froggy-guardian`
 
 Canonical discovery endpoints:
 
-- `GET https://froggyplanner.onrender.com/.well-known/froggy-guardian-agent.json`
-- `GET https://froggyplanner.onrender.com/.well-known/froggy-guardian-agent-card.json`
+- `GET https://froggyagents.online/.well-known/froggy-guardian-agent.json`
+- `GET https://froggyagents.online/.well-known/froggy-guardian-agent-card.json`
 
 ## Purpose
 
-FroggyGuardian provides a dedicated compliance and policy-oriented surface separated from the main planner agent.
+ChargeFrog: FroggyGuardian provides a dedicated compliance and policy-oriented surface separated from the main planner agent.
 
 It focuses on:
 
@@ -30,7 +30,7 @@ It focuses on:
 - fully-invested station readiness checks
 - controlled Guardian policy and schema creation initiation
 
-Internally, FroggyGuardian coordinates worker agents over A2A. It uses Hedera Guardian for policy summarization, policy replication, and compliance-oriented station workflows.
+Internally, ChargeFrog: FroggyGuardian coordinates worker agents over A2A. It uses Hedera Guardian for policy summarization, policy replication, and compliance-oriented station workflows.
 
 ## Supported Workflows
 
@@ -142,7 +142,7 @@ Interpretation:
 
 ## Authentication And Identity
 
-FroggyGuardian does not require `walletAddress` for normal policy enquiries.
+ChargeFrog: FroggyGuardian does not require `walletAddress` for normal policy enquiries.
 
 Its primary identity dependency is station context:
 
@@ -151,7 +151,7 @@ Its primary identity dependency is station context:
 
 ## Guardrails And Scope
 
-FroggyGuardian handles:
+ChargeFrog: FroggyGuardian handles:
 
 - station Guardian policy enquiries
 - policy summaries
@@ -169,7 +169,7 @@ It is a policy and compliance workflow agent, not a general chat surface.
 
 ## Operational Dependencies
 
-FroggyGuardian depends on:
+ChargeFrog: FroggyGuardian depends on:
 
 - Hedera Guardian policy APIs
 - Guardian schema APIs where relevant to creation workflows
@@ -296,4 +296,4 @@ This hosted guardian agent is intended to be registered with:
 
 The canonical hosted registration endpoint is:
 
-- `https://froggyplanner.onrender.com/a2a/froggy-guardian`
+- `https://froggyagents.online/a2a/froggy-guardian`

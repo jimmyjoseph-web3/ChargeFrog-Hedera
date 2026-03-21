@@ -50,6 +50,10 @@ function resolveDocumentationUrl(envKey) {
   return String(process.env[envKey] || '/docs').trim() || '/docs';
 }
 
+function resolveProfileImageUrl(envKey, fallbackPath) {
+  return String(process.env[envKey] || fallbackPath).trim() || fallbackPath;
+}
+
 function buildSkill({
   id,
   name,
@@ -79,6 +83,9 @@ function buildAgentMetadata({
   endpointPath,
   discoveryPath,
   agentCardPath,
+  profileImagePath,
+  profileImageFile,
+  profileImage,
   documentationUrl,
   source,
   getModel,
@@ -95,6 +102,9 @@ function buildAgentMetadata({
     endpointPath,
     discoveryPath,
     agentCardPath,
+    profileImagePath,
+    profileImageFile,
+    profileImage,
     documentationUrl,
     source,
     provider: PROVIDER,
@@ -109,7 +119,7 @@ function buildAgentMetadata({
 const PUBLIC_A2A_AGENT_METADATA = Object.freeze({
   froggychat: buildAgentMetadata({
     key: 'froggychat',
-    name: 'FroggyChat',
+    name: 'ChargeFrog: FroggyChat',
     description:
       'ChargeFrog public A2A routing agent for planner, foundry, and guardian workflows.',
     aliasPrefix: 'froggychat',
@@ -117,6 +127,12 @@ const PUBLIC_A2A_AGENT_METADATA = Object.freeze({
     endpointPath: '/a2a/froggy-chat',
     discoveryPath: '/.well-known/froggychat-agent.json',
     agentCardPath: '/.well-known/froggychat-agent-card.json',
+    profileImagePath: '/.well-known/froggychat-agent.png',
+    profileImageFile: 'froggy-chat.png',
+    profileImage: resolveProfileImageUrl(
+      'HOL_PROFILE_IMAGE_CHAT',
+      '/.well-known/froggychat-agent.png',
+    ),
     documentationUrl: resolveDocumentationUrl('HOL_DOCUMENTATION_CHAT'),
     source: 'chargefrog-froggychat',
     getModel: resolveChatModel,
@@ -145,7 +161,7 @@ const PUBLIC_A2A_AGENT_METADATA = Object.freeze({
   }),
   planner: buildAgentMetadata({
     key: 'planner',
-    name: 'FroggyPlanner',
+    name: 'ChargeFrog: FroggyPlanner',
     description:
       'ChargeFrog public A2A coordinator for station discovery, proposal generation, investor purchases, and token balance lookups.',
     aliasPrefix: 'froggyplanner',
@@ -153,6 +169,12 @@ const PUBLIC_A2A_AGENT_METADATA = Object.freeze({
     endpointPath: '/a2a/froggy-planner',
     discoveryPath: '/.well-known/froggy-planner-agent.json',
     agentCardPath: '/.well-known/froggy-planner-agent-card.json',
+    profileImagePath: '/.well-known/froggy-planner-agent.png',
+    profileImageFile: 'froggy-planner.png',
+    profileImage: resolveProfileImageUrl(
+      'HOL_PROFILE_IMAGE_PLANNER',
+      '/.well-known/froggy-planner-agent.png',
+    ),
     documentationUrl: resolveDocumentationUrl('HOL_DOCUMENTATION_PLANNER'),
     source: 'chargefrog-planner',
     getModel: resolvePlannerModel,
@@ -192,7 +214,7 @@ const PUBLIC_A2A_AGENT_METADATA = Object.freeze({
   }),
   foundry: buildAgentMetadata({
     key: 'foundry',
-    name: 'FroggyFoundry',
+    name: 'ChargeFrog: FroggyFoundry',
     description:
       'ChargeFrog public A2A admin agent for pending review, station deployment approval, deployment orchestration, and post-deployment issuance.',
     aliasPrefix: 'froggyfoundry',
@@ -200,6 +222,12 @@ const PUBLIC_A2A_AGENT_METADATA = Object.freeze({
     endpointPath: '/a2a/froggy-foundry',
     discoveryPath: '/.well-known/froggy-foundry-agent.json',
     agentCardPath: '/.well-known/froggy-foundry-agent-card.json',
+    profileImagePath: '/.well-known/froggy-foundry-agent.png',
+    profileImageFile: 'froggy-foundry.png',
+    profileImage: resolveProfileImageUrl(
+      'HOL_PROFILE_IMAGE_FOUNDRY',
+      '/.well-known/froggy-foundry-agent.png',
+    ),
     documentationUrl: resolveDocumentationUrl('HOL_DOCUMENTATION_FOUNDRY'),
     source: 'chargefrog-froggyfoundry',
     getModel: resolveFoundryModel,
@@ -238,7 +266,7 @@ const PUBLIC_A2A_AGENT_METADATA = Object.freeze({
   }),
   guardian: buildAgentMetadata({
     key: 'guardian',
-    name: 'FroggyGuardian',
+    name: 'ChargeFrog: FroggyGuardian',
     description:
       'ChargeFrog public A2A coordinator for Guardian policy enquiry, fully-invested station checks, and policy replication workflows.',
     aliasPrefix: 'froggyguardian',
@@ -246,6 +274,12 @@ const PUBLIC_A2A_AGENT_METADATA = Object.freeze({
     endpointPath: '/a2a/froggy-guardian',
     discoveryPath: '/.well-known/froggy-guardian-agent.json',
     agentCardPath: '/.well-known/froggy-guardian-agent-card.json',
+    profileImagePath: '/.well-known/froggy-guardian-agent.png',
+    profileImageFile: 'froggy-guardian.png',
+    profileImage: resolveProfileImageUrl(
+      'HOL_PROFILE_IMAGE_GUARDIAN',
+      '/.well-known/froggy-guardian-agent.png',
+    ),
     documentationUrl: resolveDocumentationUrl('HOL_DOCUMENTATION_GUARDIAN'),
     source: 'chargefrog-guardian',
     getModel: resolveGuardianModel,

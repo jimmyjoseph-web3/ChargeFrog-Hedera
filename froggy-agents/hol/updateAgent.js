@@ -334,11 +334,15 @@ function buildHcs11Profile(agentKey, runtime) {
   const bio = useLeanProfile
     ? `${config.name} is a ChargeFrog A2A ${config.category} agent.`
     : config.description;
+  const profileImage = /^https?:\/\//i.test(config.profileImage || '')
+    ? config.profileImage
+    : `${runtime.publicBaseUrl}${config.profileImage || ''}`;
   const properties = {
     documentationUrl: config.documentationUrl,
     discoveryUrl: `${runtime.publicBaseUrl}${config.discoveryPath}`,
     agentCardUrl: `${runtime.publicBaseUrl}${config.agentCardPath}`,
     endpointUrl: `${runtime.publicBaseUrl}${config.endpointPath}`,
+    ...(profileImage ? { profileImage } : {}),
     category: config.category,
     source: config.source,
     ...(useLeanProfile ? {} : { tags: config.tags }),
@@ -350,6 +354,7 @@ function buildHcs11Profile(agentKey, runtime) {
     type: ProfileType.AI_AGENT,
     display_name: config.name,
     bio,
+    ...(profileImage ? { profileImage } : {}),
     socials: useLeanProfile
       ? []
       : buildPublicAgentSocials(runtime.publicBaseUrl),
@@ -408,6 +413,9 @@ function buildUpdatePayload(profile, agentKey, options = {}) {
   const discoveryUrl = `${publicBaseUrl}${config.discoveryPath}`;
   const agentCardUrl = `${publicBaseUrl}${config.agentCardPath}`;
   const documentationUrl = config.documentationUrl;
+  const profileImage = /^https?:\/\//i.test(config.profileImage || '')
+    ? config.profileImage
+    : `${publicBaseUrl}${config.profileImage || ''}`;
   const mergedMetadata = {
     ...(isRecord(existingMetadata) ? existingMetadata : {}),
   };
@@ -430,6 +438,9 @@ function buildUpdatePayload(profile, agentKey, options = {}) {
   payload.metadata.serviceEndpoint = serviceEndpoint;
   payload.metadata.discoveryUrl = discoveryUrl;
   payload.metadata.agentCardUrl = agentCardUrl;
+  if (profileImage) {
+    payload.metadata.profileImage = profileImage;
+  }
   payload.metadata.documentationUrl = documentationUrl;
   payload.metadata.model = config.getModel();
   payload.metadata.tags = config.tags;
@@ -452,6 +463,7 @@ function buildUpdatePayload(profile, agentKey, options = {}) {
     provider: config.provider,
     category: config.category,
     documentationUrl,
+    ...(profileImage ? { profileImage } : {}),
     agentCardUrl,
     discoveryUrl,
     endpointUrl: serviceEndpoint,

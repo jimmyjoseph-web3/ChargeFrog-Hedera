@@ -1,27 +1,27 @@
-# FroggyFoundry Agent
+# ChargeFrog: FroggyFoundry Agent
 
 ## Overview
 
-FroggyFoundry is the public A2A admin agent for ChargeFrog. It handles pending station review, admin approval of station deployment, and post-deployment equity and bond token creation workflows.
+ChargeFrog: FroggyFoundry is the public A2A admin agent for ChargeFrog. It handles pending station review, admin approval of station deployment, and post-deployment equity and bond token creation workflows.
 
 This document is written for the hosted agent surface only.
 
 Hosted base URL:
 
-- `https://froggyplanner.onrender.com`
+- `https://froggyagents.online`
 
 Canonical A2A endpoint:
 
-- `POST https://froggyplanner.onrender.com/a2a/froggy-foundry`
+- `POST https://froggyagents.online/a2a/froggy-foundry`
 
 Canonical discovery endpoints:
 
-- `GET https://froggyplanner.onrender.com/.well-known/froggy-foundry-agent.json`
-- `GET https://froggyplanner.onrender.com/.well-known/froggy-foundry-agent-card.json`
+- `GET https://froggyagents.online/.well-known/froggy-foundry-agent.json`
+- `GET https://froggyagents.online/.well-known/froggy-foundry-agent-card.json`
 
 ## Purpose
 
-FroggyFoundry turns ChargeFrog admin review and approval requests into concrete station deployment and token creation workflows.
+ChargeFrog: FroggyFoundry turns ChargeFrog admin review and approval requests into concrete station deployment and token creation workflows.
 
 It is the public-facing foundry agent for:
 
@@ -31,7 +31,7 @@ It is the public-facing foundry agent for:
 - station contract deployment orchestration
 - post-deployment equity and bond token creation
 
-Internally, FroggyFoundry coordinates deployment and issuance worker flows over A2A. It uses ChargeFrog contract deployment logic plus the Hedera Asset Tokenization SDK-backed issuance flow after station deployment completes.
+Internally, ChargeFrog: FroggyFoundry coordinates deployment and issuance worker flows over A2A. It uses ChargeFrog contract deployment logic plus the Hedera Asset Tokenization SDK-backed issuance flow after station deployment completes.
 
 ## Supported Workflows
 
@@ -147,7 +147,7 @@ Interpretation:
 
 ## Authentication And Identity
 
-FroggyFoundry does not accept `walletAddress` for normal operation.
+ChargeFrog: FroggyFoundry does not accept `walletAddress` for normal operation.
 
 It uses the configured admin signer and private key on the server side for deployment and issuance workflows.
 
@@ -159,7 +159,7 @@ Its primary identity dependency is station and proposal context:
 
 ## Guardrails And Scope
 
-FroggyFoundry handles:
+ChargeFrog: FroggyFoundry handles:
 
 - station review
 - pending admin action queues
@@ -180,7 +180,7 @@ It is an admin deployment and issuance workflow agent, not an investor-facing ch
 
 ## Operational Dependencies
 
-FroggyFoundry depends on:
+ChargeFrog: FroggyFoundry depends on:
 
 - MongoDB for station and proposal state
 - ChargeFrog Registry, Bolt, Station, and Shares contract artifacts and deployment logic
@@ -318,4 +318,4 @@ This hosted foundry agent is intended to be registered with:
 
 The canonical hosted registration endpoint is:
 
-- `https://froggyplanner.onrender.com/a2a/froggy-foundry`
+- `https://froggyagents.online/a2a/froggy-foundry`

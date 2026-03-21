@@ -1,38 +1,37 @@
-# FroggyPlanner Agent
+# ChargeFrog: FroggyPlanner Agent
 
 ## Overview
 
-FroggyPlanner is the public A2A coordinator agent for ChargeFrog. It handles station opportunity discovery, investment proposal orchestration, station asset issuance readiness, investor purchase flows, and token balance retrieval.
+ChargeFrog: FroggyPlanner is the public A2A coordinator agent for ChargeFrog. It handles station opportunity discovery, investment proposal orchestration, investor purchase flows, and token balance retrieval.
 
 This document is written for the hosted agent surface only.
 
 Hosted base URL:
 
-- `https://froggyplanner.onrender.com`
+- `https://froggyagents.online`
 
 Canonical A2A endpoint:
 
-- `POST https://froggyplanner.onrender.com/a2a/froggy-planner`
+- `POST https://froggyagents.online/a2a/froggy-planner`
 
 Canonical discovery endpoints:
 
-- `GET https://froggyplanner.onrender.com/.well-known/froggy-planner-agent.json`
-- `GET https://froggyplanner.onrender.com/.well-known/froggy-planner-agent-card.json`
+- `GET https://froggyagents.online/.well-known/froggy-planner-agent.json`
+- `GET https://froggyagents.online/.well-known/froggy-planner-agent-card.json`
 
 ## Purpose
 
-FroggyPlanner turns user or operator requests into concrete ChargeFrog station investment workflows.
+ChargeFrog: FroggyPlanner turns user or operator requests into concrete ChargeFrog station investment workflows.
 
 It is the public-facing planner agent for:
 
 - station opportunity discovery
 - neighborhood demand and interest evaluation
 - investment proposal generation
-- station asset issuance orchestration
 - investor station purchase flows
 - equity and bond balance retrieval
 
-Internally, FroggyPlanner coordinates worker agents over A2A. It also relies on the Hedera Asset Tokenization SDK for tokenization and asset issuance flows.
+Internally, ChargeFrog: FroggyPlanner coordinates worker agents over A2A. After proposal creation, deployment and token creation are handed off to ChargeFrog: FroggyFoundry. Planner-side investor flows rely on the Hedera Asset Tokenization SDK for purchase execution and balance lookups.
 
 ## Supported Workflows
 
@@ -63,14 +62,14 @@ Typical request:
 
 - `create an investment proposal near Madison Square Garden`
 
-### 3. Station asset issuance readiness
+### 3. Deployment and issuance handoff
 
 The agent can:
 
-- read proposal data
-- generate ISINs
-- create equity and bond tokens
-- save issued asset records
+- recognize deployment and issuance intents after proposal approval
+- extract a `proposalId` when one is provided
+- direct the caller to ChargeFrog: FroggyFoundry for deployment and token creation
+- stop before performing deployment or token creation itself
 
 Typical request:
 
@@ -84,7 +83,6 @@ The agent can:
 - show investment choices
 - execute equity purchases
 - execute bond purchases
-- mint and issue the corresponding token flow
 - retrieve balances for station-linked equity or bond assets
 
 Typical requests:
@@ -172,7 +170,7 @@ Interpretation:
 
 ## Authentication And Identity
 
-FroggyPlanner can operate in read-only scenarios without a wallet identifier, but wallet-linked investment actions require a Hedera account ID.
+ChargeFrog: FroggyPlanner can operate in read-only scenarios without a wallet identifier, but wallet-linked investment actions require a Hedera account ID.
 
 Expected wallet format:
 
@@ -182,12 +180,11 @@ The planner is intentionally Hedera-account oriented for identity in investment 
 
 ## Guardrails And Scope
 
-FroggyPlanner handles:
+ChargeFrog: FroggyPlanner handles:
 
 - station investment
 - station discovery and interest
 - investment proposals
-- asset issuance orchestration
 - equity and bond purchase workflows
 - token balance lookups
 
@@ -199,12 +196,12 @@ It does not handle:
 
 ## Operational Dependencies
 
-FroggyPlanner depends on:
+ChargeFrog: FroggyPlanner depends on:
 
 - OpenAI for selected classification and proposal drafting
 - MongoDB for station, proposal, and issued asset records
 - TomTom for area and reverse-geocode workflows
-- Hedera Asset Tokenization SDK for token creation, minting, issuing, and balance lookup
+- Hedera Asset Tokenization SDK-backed purchase and balance lookup flows
 - Pinata/IPFS for off-chain proposal metadata
 
 The public A2A endpoint is a transport surface over internal coordinator and worker-agent logic. The business workflows are not implemented in the HTTP route itself.
@@ -334,4 +331,4 @@ This hosted planner agent is intended to be registered with:
 
 The canonical hosted registration endpoint is:
 
-- `https://froggyplanner.onrender.com/a2a/froggy-planner`
+- `https://froggyagents.online/a2a/froggy-planner`
