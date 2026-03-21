@@ -10,6 +10,15 @@ const {
   normalizeReasoningEffort,
 } = require('./shared');
 const {
+  buildPlannerCoordinatorTrail,
+  buildFoundryCoordinatorTrail,
+  buildPlannerFailureTrail,
+  buildFoundryFailureTrail,
+  buildFailureResult,
+  classifyPublicError,
+  buildWorkerFailureTrail,
+} = require('../../lib/workflowTrail');
+const {
   parseLatLonFromMessage,
   normalizeAreaForTomTom,
   parseStationId,
@@ -198,6 +207,17 @@ async function callPlannerWorkerAgent({
   });
 }
 
+function omitKeys(value, keys) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const keySet = new Set(keys);
+  return Object.fromEntries(
+    Object.entries(value).filter(([key]) => !keySet.has(key)),
+  );
+}
+
 function buildDefaultFoundryProjectUrl(stationId) {
   const rawBase = String(
     process.env.CHARGEFROG_STATION_PROJECT_BASE_URL ||
@@ -232,6 +252,8 @@ async function runStationFinderAgent({
     String(intentAnalysis?.area || parseLocation(message) || ''),
   );
   const explicitCoordinates = parseLatLonFromMessage(message);
+
+  try {
 
   if (!area && !explicitCoordinates) {
     return {
@@ -527,7 +549,7 @@ async function runStationFinderAgent({
   return {
     status: 'candidate_ready',
     reply:
-      'Interest threshold met. I prepared a proposed station area and rationale. Passing to Investment Proposal Generator for proposal generation.',
+      'The interest threshold has been met, so I’ve prepared a proposed station area and rationale and I’m now generating the investment proposal.',
     area: resolvedArea,
     anchor: center,
     neighborhood: neighborhood.data,
@@ -538,6 +560,22 @@ async function runStationFinderAgent({
     rankedStations: rankedStations.slice(0, 5),
     toolTrace,
   };
+  } catch (error) {
+    const safeError = classifyPublicError(error, 'stationFinder');
+    return {
+      status: 'failed',
+      degraded: true,
+      reply: safeError.reply,
+      errorCode: safeError.errorCode,
+      toolTrace,
+      trail: buildWorkerFailureTrail({
+        agentKey: 'stationFinder',
+        errorCode: safeError.errorCode,
+        category: safeError.category,
+      }),
+      __trailReady: true,
+    };
+  }
 }
 
 // Handles runInvestmentProposalGeneratorAgent.
@@ -546,6 +584,7 @@ async function runInvestmentProposalGeneratorAgent({
   correlationId,
 }) {
   const toolTrace = [];
+  try {
   if (!finderResult || finderResult.status !== 'candidate_ready') {
     return {
       status: 'skipped',
@@ -814,11 +853,27 @@ async function runInvestmentProposalGeneratorAgent({
   return {
     status: 'proposal_created',
     reply:
-      'Investment proposal generated and submitted through the proposal tool. Status is now pending admin approval.',
+      'Your investment proposal has been created and submitted. It is now waiting for admin approval, and you can review the proposal details while that approval is pending.',
     proposal: proposal.data,
     proposalPayload: proposal.data?.proposalPayload || proposalPayloadDraft,
     toolTrace,
   };
+  } catch (error) {
+    const safeError = classifyPublicError(error, 'investmentProposalGenerator');
+    return {
+      status: 'failed',
+      degraded: true,
+      reply: safeError.reply,
+      errorCode: safeError.errorCode,
+      toolTrace,
+      trail: buildWorkerFailureTrail({
+        agentKey: 'investmentProposalGenerator',
+        errorCode: safeError.errorCode,
+        category: safeError.category,
+      }),
+      __trailReady: true,
+    };
+  }
 }
 
 // Handles autoAdvanceProposalToInvestment.
@@ -852,31 +907,32 @@ async function autoAdvanceProposalToInvestment({ proposalId, correlationId }) {
 // Handles runStationAssetIssuerAgent.
 async function runStationAssetIssuerAgent({ message, correlationId }) {
   const toolTrace = [];
-  const proposalId = parseProposalId(message);
-  if (!proposalId) {
-    return {
-      status: 'missing_proposal_id',
-      reply:
-        'To issue station assets, provide a proposal ID. Example: "issue assets for proposal proposal_123".',
-      toolTrace,
-    };
-  }
+  try {
+    const proposalId = parseProposalId(message);
+    if (!proposalId) {
+      return {
+        status: 'missing_proposal_id',
+        reply:
+          'To issue station assets, provide a proposal ID. Example: "issue assets for proposal proposal_123".',
+        toolTrace,
+      };
+    }
 
-  const onChainProposal = await callTool({
-    correlationId,
-    agent: AGENTS.STATION_ASSET_ISSUER,
-    toolName: 'readOnChainProposal',
-    args: { proposalId },
-  });
-  toolTrace.push({
-    tool: 'readOnChainProposal',
-    arguments: { proposalId },
-    resultSummary: {
-      status: onChainProposal.data.status,
-      metadataUri: onChainProposal.data.metadataUri,
-      stationId: onChainProposal.data.stationId,
-    },
-  });
+    const onChainProposal = await callTool({
+      correlationId,
+      agent: AGENTS.STATION_ASSET_ISSUER,
+      toolName: 'readOnChainProposal',
+      args: { proposalId },
+    });
+    toolTrace.push({
+      tool: 'readOnChainProposal',
+      arguments: { proposalId },
+      resultSummary: {
+        status: onChainProposal.data.status,
+        metadataUri: onChainProposal.data.metadataUri,
+        stationId: onChainProposal.data.stationId,
+      },
+    });
 
   const stationSnapshot = await loadStationSnapshotForProposal({
     correlationId,
@@ -1155,32 +1211,48 @@ async function runStationAssetIssuerAgent({ message, correlationId }) {
     },
   });
 
-  return {
-    status: 'assets_issued',
-    reply:
-      'Station assets issued. Equity and bond tokens are now available for investment stage.',
-    proposalId,
-    stationId,
-    equity: {
-      tokenAddress: equityToken.data.tokenAddress,
-      txHash: equityToken.data.txHash,
-      isin: equityIsin.data.isin_number || equityIsin.data.isin,
-      isin_number: equityIsin.data.isin_number || equityIsin.data.isin,
-      totalSupply: equityShares,
-    },
-    bond: {
-      tokenAddress: bondToken.data.tokenAddress,
-      txHash: bondToken.data.txHash,
-      isin: bondIsin.data.isin_number || bondIsin.data.isin,
-      isin_number: bondIsin.data.isin_number || bondIsin.data.isin,
-      totalSupply: bondUnits,
-    },
-    proposalSupply: {
-      equityShares,
-      bondUnits,
-    },
-    toolTrace,
-  };
+    return {
+      status: 'assets_issued',
+      reply:
+        'Station assets issued. Equity and bond tokens are now available for investment stage.',
+      proposalId,
+      stationId,
+      equity: {
+        tokenAddress: equityToken.data.tokenAddress,
+        txHash: equityToken.data.txHash,
+        isin: equityIsin.data.isin_number || equityIsin.data.isin,
+        isin_number: equityIsin.data.isin_number || equityIsin.data.isin,
+        totalSupply: equityShares,
+      },
+      bond: {
+        tokenAddress: bondToken.data.tokenAddress,
+        txHash: bondToken.data.txHash,
+        isin: bondIsin.data.isin_number || bondIsin.data.isin,
+        isin_number: bondIsin.data.isin_number || bondIsin.data.isin,
+        totalSupply: bondUnits,
+      },
+      proposalSupply: {
+        equityShares,
+        bondUnits,
+      },
+      toolTrace,
+    };
+  } catch (error) {
+    const safeError = classifyPublicError(error, 'stationAssetIssuer');
+    return {
+      status: 'failed',
+      degraded: true,
+      reply: safeError.reply,
+      errorCode: safeError.errorCode,
+      toolTrace,
+      trail: buildWorkerFailureTrail({
+        agentKey: 'stationAssetIssuer',
+        errorCode: safeError.errorCode,
+        category: safeError.category,
+      }),
+      __trailReady: true,
+    };
+  }
 }
 
 // Handles runStationAssetIssuerIfProposalApproved.
@@ -1381,9 +1453,14 @@ function buildFoundryStationReviewSummary({
 async function buildFoundryStationReview({ station, correlationId }) {
   const stationSummary = summarizePendingAdminStation(station);
   const proposalId = String(station?.proposalId || '').trim();
+  const normalizedStation = omitKeys(station, [
+    'reviewSummary',
+    'proposalTitle',
+    'proposalDescription',
+  ]);
   if (!proposalId) {
     return {
-      ...station,
+      ...normalizedStation,
       reviewSummary: stationSummary,
     };
   }
@@ -1416,7 +1493,7 @@ async function buildFoundryStationReview({ station, correlationId }) {
   });
 
   return {
-    ...station,
+    ...normalizedStation,
     reviewSummary,
     proposalTitle: onChainProposal.ok ? onChainProposal.data?.title || null : null,
     proposalDescription: onChainProposal.ok
@@ -1502,29 +1579,47 @@ async function listPendingAdminActionStations({ correlationId }) {
 }
 
 async function runFoundryAttentionQueue({ correlationId }) {
-  const stations = await listPendingAdminActionStations({ correlationId });
-  if (stations.length === 0) {
+  try {
+    const stations = await listPendingAdminActionStations({ correlationId });
+    if (stations.length === 0) {
+      return {
+        status: 'no_pending_admin_action',
+        reply: 'There are no stations pending admin action right now.',
+        stations: [],
+      };
+    }
+
+    const reviewedStations = await Promise.all(
+      stations.map((station) =>
+        buildFoundryStationReview({ station, correlationId }),
+      ),
+    );
+    const stationSummaries = reviewedStations.map(
+      (station) => station.reviewSummary || summarizePendingAdminStation(station),
+    );
     return {
-      status: 'no_pending_admin_action',
-      reply: 'There are no stations pending admin action right now.',
-      stations: [],
+      status: 'pending_admin_action_queue',
+      reply:
+        stations.length === 1
+          ? `The station requiring your attention is ${stationSummaries[0]}; ${FOUNDRY_APPROVAL_REPLY}`
+          : `These stations require your attention: ${stationSummaries.join('; ')}; ${FOUNDRY_APPROVAL_REPLY}`,
+      stations: reviewedStations,
+    };
+  } catch (error) {
+    const safeError = classifyPublicError(error, 'foundry');
+    return {
+      status: 'failed',
+      degraded: true,
+      reply: safeError.reply,
+      errorCode: safeError.errorCode,
+      trail: buildFoundryFailureTrail({
+        phase: 'queue',
+        errorCode: safeError.errorCode,
+        category: safeError.category,
+      }),
+      __trailReady: true,
     };
   }
-
-  const reviewedStations = await Promise.all(
-    stations.map((station) => buildFoundryStationReview({ station, correlationId })),
-  );
-  const stationSummaries = reviewedStations.map(
-    (station) => station.reviewSummary || summarizePendingAdminStation(station),
-  );
-  return {
-    status: 'pending_admin_action_queue',
-    reply:
-      stations.length === 1
-        ? `The station requiring your attention is ${stationSummaries[0]}; ${FOUNDRY_APPROVAL_REPLY}`
-        : `These stations require your attention: ${stationSummaries.join('; ')}; ${FOUNDRY_APPROVAL_REPLY}`,
-    stations: reviewedStations,
-  };
 }
 
 async function resolveFoundryApprovalTarget({ input, correlationId }) {
@@ -1733,6 +1828,10 @@ async function runFoundryWorkflow(input = {}) {
 
   const correlationId = input.correlationId || crypto.randomUUID();
   const toolTrace = [];
+  let failurePhase = 'context';
+  let failedWorkerAgentKey = null;
+
+  try {
 
   const onChainProposal = await callTool({
     correlationId,
@@ -1799,6 +1898,7 @@ async function runFoundryWorkflow(input = {}) {
       deployment: deploymentRecord,
     };
   } else {
+    failurePhase = 'deployment';
     const deployInput = resolveFoundryDeploymentInput({
       proposalId,
       onChainProposal: onChainProposal.data,
@@ -1859,11 +1959,13 @@ async function runFoundryWorkflow(input = {}) {
     deploymentRecord = extractDeploymentMetadata(saveDeployment.data);
     deployment = {
       status: 'station_deployed',
-      reply: `Station ${deployInput.stationId} deployed successfully. Triggering station asset issuer.`,
+      reply: `Station ${deployInput.stationId} deployed successfully. Handing it over to the Station Asset Issuer Agent.`,
       deployment: deploymentRecord,
     };
   }
 
+  failurePhase = 'issuance';
+  failedWorkerAgentKey = 'stationAssetIssuer';
   const issuance = await callWorkerAgent({
     callerAgent: AGENTS.FOUNDRY,
     endpointPath: PLANNER_WORKER_ENDPOINTS.stationAssetIssuer,
@@ -1874,6 +1976,7 @@ async function runFoundryWorkflow(input = {}) {
       correlationId,
     },
   });
+  failedWorkerAgentKey = null;
   toolTrace.push({
     tool: 'a2a:station-asset-issuer',
     arguments: { proposalId },
@@ -1887,7 +1990,7 @@ async function runFoundryWorkflow(input = {}) {
     issuance?.status === 'assets_issued' ||
     issuance?.status === 'already_issued';
 
-  return {
+  const result = {
     status: issuanceCompleted
       ? 'deployment_and_issuance_complete'
       : 'deployment_complete_issuance_pending',
@@ -1895,7 +1998,7 @@ async function runFoundryWorkflow(input = {}) {
       issuance?.status === 'already_issued'
         ? 'Station deployment is already recorded and the station asset issuer reports the tokens are already issued.'
         : issuanceCompleted
-          ? 'Station deployment completed and the station asset issuer created equity and bond tokens.'
+          ? 'Here are the tx hashes for a complete station deployment. The Station Asset Issuer Agent has also created an Equity and Bond Token for each station, here are the tx hashes for the tokens:'
           : `Station deployment completed, but token issuance did not finish cleanly: ${issuance?.reply || 'unknown issuer response'}`,
     proposalId,
     stationId:
@@ -1906,6 +2009,35 @@ async function runFoundryWorkflow(input = {}) {
     issuance: summarizeIssuance(issuance),
     toolTrace,
   };
+
+  const trail = buildFoundryCoordinatorTrail({
+    result,
+    stationAssetIssuerResult: issuance,
+  });
+  if (trail.length > 0) {
+    result.trail = trail;
+    result.__trailReady = true;
+  }
+
+  return result;
+  } catch (error) {
+    const safeError = classifyPublicError(error, 'foundry');
+    return {
+      status: 'failed',
+      degraded: true,
+      proposalId,
+      reply: safeError.reply,
+      errorCode: safeError.errorCode,
+      toolTrace,
+      trail: buildFoundryFailureTrail({
+        phase: failurePhase,
+        failedWorkerAgentKey,
+        errorCode: safeError.errorCode,
+        category: safeError.category,
+      }),
+      __trailReady: true,
+    };
+  }
 }
 
 async function runFoundryWorker(input = {}) {
@@ -2388,6 +2520,9 @@ async function runOrchestrator({ message, walletAddress }) {
   const domainScope = evaluateChatDomainScope({ message, intent });
   const agents = [];
   let result;
+  let stationFinderResult = null;
+  let investmentProposalGeneratorResult = null;
+  let failedWorkerAgentKey = null;
 
   try {
     if (!domainScope.allowed) {
@@ -2419,6 +2554,7 @@ async function runOrchestrator({ message, walletAddress }) {
     }
 
     if (intent === STATE.FIND_STATION_FOR_PROPOSAL) {
+      failedWorkerAgentKey = 'stationFinder';
       const stationFinder = await callPlannerWorkerAgent({
         endpointPath: PLANNER_WORKER_ENDPOINTS.stationFinder,
         action: 'a2a:station_finder',
@@ -2430,12 +2566,15 @@ async function runOrchestrator({ message, walletAddress }) {
           correlationId,
         },
       });
+      failedWorkerAgentKey = null;
+      stationFinderResult = stationFinder;
       agents.push({
         agent: AGENTS.STATION_FINDER,
         status: stationFinder.status,
       });
 
       if (stationFinder.status === 'candidate_ready') {
+        failedWorkerAgentKey = 'investmentProposalGenerator';
         const investmentProposalGenerator = await callPlannerWorkerAgent({
           endpointPath: PLANNER_WORKER_ENDPOINTS.investmentProposalGenerator,
           action: 'a2a:investment_proposal_generator',
@@ -2445,6 +2584,8 @@ async function runOrchestrator({ message, walletAddress }) {
             correlationId,
           },
         });
+        failedWorkerAgentKey = null;
+        investmentProposalGeneratorResult = investmentProposalGenerator;
         agents.push({
           agent: AGENTS.INVESTMENT_PROPOSAL_GENERATOR,
           status: investmentProposalGenerator.status,
@@ -2610,11 +2751,21 @@ async function runOrchestrator({ message, walletAddress }) {
     }
 
     const assembled = {
+      ...omitKeys(result, ['intent', 'correlationId', 'degraded', 'trail', '__trailReady']),
       intent,
       correlationId,
       degraded: false,
-      ...result,
     };
+
+    const trail = buildPlannerCoordinatorTrail({
+      result: assembled,
+      stationFinderResult,
+      investmentProposalGeneratorResult,
+    });
+    if (trail.length > 0) {
+      assembled.trail = trail;
+      assembled.__trailReady = true;
+    }
 
     logStructured({
       correlationId,
@@ -2633,6 +2784,7 @@ async function runOrchestrator({ message, walletAddress }) {
     return assembled;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const safeError = classifyPublicError(error, 'planner');
     logStructured({
       correlationId,
       level: 'error',
@@ -2644,14 +2796,32 @@ async function runOrchestrator({ message, walletAddress }) {
       durationMs: Date.now() - startedAt,
       error: errorMessage,
     });
-    return {
+    if (intent === STATE.FIND_STATION_FOR_PROPOSAL) {
+      return {
+        intent,
+        correlationId,
+        degraded: true,
+        reply: safeError.reply,
+        errorCode: safeError.errorCode,
+        trail: buildPlannerFailureTrail({
+          intent,
+          stationFinderResult,
+          investmentProposalGeneratorResult,
+          failedWorkerAgentKey,
+          errorCode: safeError.errorCode,
+          category: safeError.category,
+        }),
+        __trailReady: true,
+      };
+    }
+    return buildFailureResult({
+      agentKey: 'planner',
       intent,
-      correlationId,
-      degraded: true,
-      reply:
-        'I hit an upstream dependency error while executing this workflow. Please try again shortly.',
-      error: errorMessage,
-    };
+      error,
+      extra: {
+        correlationId,
+      },
+    });
   }
 }
 
@@ -2726,31 +2896,40 @@ async function runFoundryAgent(input = {}) {
 
   const correlationId = input.correlationId || crypto.randomUUID();
   const intent = parseFoundryIntent(input);
-
-  if (intent === 'list_pending_admin_action') {
-    return runFoundryAttentionQueue({ correlationId });
-  }
-
-  if (intent === 'approve_pending_admin_action') {
-    const resolution = await resolveFoundryApprovalTarget({
-      input,
-      correlationId,
-    });
-    if (resolution.status !== 'resolved') {
-      return resolution;
+  try {
+    if (intent === 'list_pending_admin_action') {
+      return await runFoundryAttentionQueue({ correlationId });
     }
-    return runFoundryWorkflow({
-      ...input,
-      proposalId: resolution.proposalId,
-      correlationId,
+
+    if (intent === 'approve_pending_admin_action') {
+      const resolution = await resolveFoundryApprovalTarget({
+        input,
+        correlationId,
+      });
+      if (resolution.status !== 'resolved') {
+        return resolution;
+      }
+      return await runFoundryWorkflow({
+        ...input,
+        proposalId: resolution.proposalId,
+        correlationId,
+      });
+    }
+
+    return {
+      status: 'general',
+      reply:
+        'I can list stations pending admin action, and approve a station proposal for deployment on Hedera testnet plus equity and bond token creation.',
+    };
+  } catch (error) {
+    return buildFailureResult({
+      agentKey: 'foundry',
+      error,
+      extra: {
+        correlationId,
+      },
     });
   }
-
-  return {
-    status: 'general',
-    reply:
-      'I can list stations pending admin action, and approve a station proposal for deployment on Hedera testnet plus equity and bond token creation.',
-  };
 }
 
 module.exports = {
@@ -2769,5 +2948,6 @@ module.exports = {
   DECISION_POLICIES,
   PROMPT_VERSION,
   AGENT_PROMPTS,
+  parseFoundryIntent,
   runStationAssetIssuerIfProposalApproved,
 };
