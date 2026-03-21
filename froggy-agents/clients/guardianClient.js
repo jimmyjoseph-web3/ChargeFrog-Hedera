@@ -84,7 +84,6 @@ function parseJsonSafe(value) {
   }
 }
 
-
 function truncateText(value, maxLength = 600) {
   const text = String(value || '');
   if (text.length <= maxLength) return text;
@@ -212,6 +211,28 @@ async function getGuardianJson(pathname, headers = {}) {
       Accept: 'application/json',
       ...headers,
     },
+  });
+
+  const responseText = await response.text();
+  const responseJson = parseJsonSafe(responseText);
+  if (!response.ok) {
+    throw new Error(
+      `Guardian request failed (${response.status}) ${pathname}: ${truncateText(responseText || response.statusText)}`,
+    );
+  }
+  return responseJson !== null ? responseJson : { raw: responseText };
+}
+
+async function putGuardianJson(pathname, body, headers = {}) {
+  const url = `${getGuardianBaseUrl()}${pathname}`;
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...headers,
+    },
+    body: JSON.stringify(toObject(body, {})),
   });
 
   const responseText = await response.text();
