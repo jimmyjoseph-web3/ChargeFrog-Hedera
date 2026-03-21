@@ -1,6 +1,12 @@
 const path = require('path');
 const { loadMarkdownPrompt } = require('../lib/promptLoader');
 const { callInternalA2aAgent } = require('../http/internalA2a');
+const {
+  buildGuardianCoordinatorTrail,
+  buildGuardianFailureTrail,
+  buildWorkerFailureTrail,
+  classifyPublicError,
+} = require('../lib/workflowTrail');
 const { guardianTools } = require('./tools');
 const { renderGuardianReply } = require('./replies');
 
@@ -29,6 +35,20 @@ const GUARDIAN_WORKER_ENDPOINTS = Object.freeze({
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function omitTrailFields(value) {
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const {
+    trail: _ignoredTrail,
+    workerTrail: _ignoredWorkerTrail,
+    __trailReady: _ignoredTrailReady,
+    ...rest
+  } = value;
+  return rest;
 }
 
 function unwrapResult(value) {
@@ -494,55 +514,89 @@ async function callGuardianWorkerAgent({
 }
 
 async function runGuardianPolicySummarizerAgent(input = {}) {
-  const stationName = normalizeStationName(input.stationName);
-  if (!stationName) {
-    return {
-      intent: INTENTS.POLICY_ENQUIRY,
-      stationName: null,
-      blocked: true,
-      summary: renderGuardianReply('chatMissingStationSummary'),
-      reply: renderGuardianReply('chatMissingStationReply'),
-    };
-  }
+  try {
+    const stationName = normalizeStationName(input.stationName);
+    if (!stationName) {
+      return {
+        intent: INTENTS.POLICY_ENQUIRY,
+        stationName: null,
+        blocked: true,
+        summary: renderGuardianReply('chatMissingStationSummary'),
+        reply: renderGuardianReply('chatMissingStationReply'),
+      };
+    }
 
-  const policiesResponse = await guardianTools.listPolicies({});
-  const policies = normalizePolicyListResponse(policiesResponse);
-  const matchedPolicies = matchPoliciesByStationName(policies, stationName);
+    const policiesResponse = await guardianTools.listPolicies({});
+    const policies = normalizePolicyListResponse(policiesResponse);
+    const matchedPolicies = matchPoliciesByStationName(policies, stationName);
 
-  if (matchedPolicies.length === 0) {
+    if (matchedPolicies.length === 0) {
+      return {
+        intent: INTENTS.POLICY_ENQUIRY,
+        stationName,
+        blocked: true,
+        summary: renderGuardianReply('chatNoPoliciesSummary', {
+          STATION_NAME: stationName,
+        }),
+        reply: renderGuardianReply('chatNoPoliciesReply', {
+          STATION_NAME: stationName,
+        }),
+        matchedPolicies: [],
+      };
+    }
+
+    const detailedPolicies = await loadDetailedPolicies(matchedPolicies);
+    const policySummaries = detailedPolicies.map((policy) =>
+      summarizePolicyRecord(policy),
+    );
+    const reply = await summarizeGuardianReply({
+      stationName,
+      policySummaries,
+    });
+
     return {
       intent: INTENTS.POLICY_ENQUIRY,
       stationName,
-      blocked: true,
-      summary: renderGuardianReply('chatNoPoliciesSummary', {
-        STATION_NAME: stationName,
+      reply,
+      policySummaries,
+    };
+  } catch (error) {
+    const safeError = classifyPublicError(error, 'guardianPolicySummarizer');
+    return {
+      intent: INTENTS.POLICY_ENQUIRY,
+      status: 'failed',
+      degraded: true,
+      reply: safeError.reply,
+      errorCode: safeError.errorCode,
+      trail: buildWorkerFailureTrail({
+        agentKey: 'guardianPolicySummarizer',
+        errorCode: safeError.errorCode,
+        category: safeError.category,
       }),
-      reply: renderGuardianReply('chatNoPoliciesReply', {
-        STATION_NAME: stationName,
-      }),
-      matchedPolicies: [],
+      __trailReady: true,
     };
   }
-
-  const detailedPolicies = await loadDetailedPolicies(matchedPolicies);
-  const policySummaries = detailedPolicies.map((policy) =>
-    summarizePolicyRecord(policy),
-  );
-  const reply = await summarizeGuardianReply({
-    stationName,
-    policySummaries,
-  });
-
-  return {
-    intent: INTENTS.POLICY_ENQUIRY,
-    stationName,
-    reply,
-    policySummaries,
-  };
 }
 
 async function runGuardianPolicyCreatorAgent(input = {}) {
-  return runGuardianAdminWorkflow(input);
+  try {
+    return await runGuardianAdminWorkflow(input);
+  } catch (error) {
+    const safeError = classifyPublicError(error, 'guardianPolicyCreator');
+    return {
+      intent: INTENTS.CREATE_GUARDIAN_POLICIES_FOR_STATION,
+      status: 'failed',
+      degraded: true,
+      reply: safeError.reply,
+      errorCode: safeError.errorCode,
+      trail: buildWorkerFailureTrail({
+        agentKey: 'guardianPolicyCreator',
+        errorCode: safeError.errorCode,
+        category: safeError.category,
+      }),
+      __trailReady: true,
+    };
+  }
 }
 
 async function runGuardianChatAgent(input = {}) {
@@ -561,47 +615,109 @@ async function runGuardianChatAgent(input = {}) {
     throw new Error('message is required');
   }
 
-  if (isGuardianAdminIntent(message)) {
-    return callGuardianWorkerAgent({
-      endpointPath: GUARDIAN_WORKER_ENDPOINTS.policyCreator,
-      action: 'a2a:guardian_policy_creator',
-      correlationId: null,
-      payload: { message },
-    });
-  }
+  try {
+    if (isGuardianAdminIntent(message)) {
+      const workerResult = await callGuardianWorkerAgent({
+        endpointPath: GUARDIAN_WORKER_ENDPOINTS.policyCreator,
+        action: 'a2a:guardian_policy_creator',
+        correlationId: null,
+        payload: { message },
+      });
+      if (
+        workerResult &&
+        typeof workerResult === 'object' &&
+        !Array.isArray(workerResult)
+      ) {
+        const trail = buildGuardianCoordinatorTrail({
+          result: workerResult,
+          workerAgentKey: 'guardianPolicyCreator',
+          workerResult,
+        });
+        if (trail.length > 0) {
+          return {
+            ...omitTrailFields(workerResult),
+            trail,
+            __trailReady: true,
+          };
+        }
+      }
+      return workerResult;
+    }
 
-  const intentAnalysis = await classifyGuardianIntent(message);
-  const stationName = normalizeStationName(intentAnalysis.stationName);
+    const intentAnalysis = await classifyGuardianIntent(message);
+    const stationName = normalizeStationName(intentAnalysis.stationName);
 
-  if (intentAnalysis.intent !== INTENTS.POLICY_ENQUIRY) {
-    return {
-      intent: intentAnalysis.intent,
-      stationName: stationName || null,
-      blocked: true,
-      summary: renderGuardianReply('chatGeneralBlockedSummary'),
-      reply: renderGuardianReply('chatGeneralBlockedReply'),
-    };
-  }
-
-  if (!stationName) {
-    return {
-      intent: intentAnalysis.intent,
-      stationName: null,
-      blocked: true,
-      summary: renderGuardianReply('chatMissingStationSummary'),
-      reply: renderGuardianReply('chatMissingStationReply'),
-    };
-  }
-  if (intentAnalysis.intent === INTENTS.POLICY_ENQUIRY) {
-    return callGuardianWorkerAgent({
-      endpointPath: GUARDIAN_WORKER_ENDPOINTS.policySummarizer,
-      action: 'a2a:guardian_policy_summarizer',
-      correlationId: null,
-      payload: {
-        stationName,
+    if (intentAnalysis.intent !== INTENTS.POLICY_ENQUIRY) {
+      return {
         intent: intentAnalysis.intent,
-      },
-    });
+        stationName: stationName || null,
+        blocked: true,
+        summary: renderGuardianReply('chatGeneralBlockedSummary'),
+        reply: renderGuardianReply('chatGeneralBlockedReply'),
+      };
+    }
+
+    if (!stationName) {
+      return {
+        intent: intentAnalysis.intent,
+        stationName: null,
+        blocked: true,
+        summary: renderGuardianReply('chatMissingStationSummary'),
+        reply: renderGuardianReply('chatMissingStationReply'),
+      };
+    }
+    if (intentAnalysis.intent === INTENTS.POLICY_ENQUIRY) {
+      const workerResult = await callGuardianWorkerAgent({
+        endpointPath: GUARDIAN_WORKER_ENDPOINTS.policySummarizer,
+        action: 'a2a:guardian_policy_summarizer',
+        correlationId: null,
+        payload: {
+          stationName,
+          intent: intentAnalysis.intent,
+        },
+      });
+      if (
+        workerResult &&
+        typeof workerResult === 'object' &&
+        !Array.isArray(workerResult)
+      ) {
+        const trail = buildGuardianCoordinatorTrail({
+          result: workerResult,
+          workerAgentKey: 'guardianPolicySummarizer',
+          workerResult,
+        });
+        if (trail.length > 0) {
+          return {
+            ...omitTrailFields(workerResult),
+            trail,
+            __trailReady: true,
+          };
+        }
+      }
+      return workerResult;
+    }
+  } catch (error) {
+    const intent = isGuardianAdminIntent(message)
+      ? INTENTS.CREATE_GUARDIAN_POLICIES_FOR_STATION
+      : INTENTS.POLICY_ENQUIRY;
+    const failedWorkerAgentKey = isGuardianAdminIntent(message)
+      ? 'guardianPolicyCreator'
+      : 'guardianPolicySummarizer';
+    const safeError = classifyPublicError(error, 'guardian');
+    return {
+      intent,
+      status: 'failed',
+      degraded: true,
+      reply: safeError.reply,
+      errorCode: safeError.errorCode,
+      trail: buildGuardianFailureTrail({
+        intent,
+        failedWorkerAgentKey,
+        errorCode: safeError.errorCode,
+        category: safeError.category,
+      }),
+      __trailReady: true,
+    };
   }
 }
 
