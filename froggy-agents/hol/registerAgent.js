@@ -243,45 +243,6 @@ async function resolveValidatedAdditionalRegistries(client, agentKey) {
   };
 }
 
-async function resolveValidatedAdditionalRegistries(client, agentKey) {
-  const requested = resolveRequestedAdditionalRegistries(agentKey);
-
-  if (!requested.length) {
-    return {
-      requested,
-      supported: [],
-      selected: [],
-    };
-  }
-
-  const catalog = await client.getAdditionalRegistries();
-  const supported = new Set();
-
-  for (const registry of catalog.registries || []) {
-    for (const network of registry.networks || []) {
-      if (network.key) supported.add(network.key);
-      if (network.registryId) supported.add(network.registryId);
-      if (network.networkId) supported.add(network.networkId);
-    }
-  }
-
-  const supportedList = Array.from(supported);
-
-  const missing = requested.filter((value) => !supported.has(value));
-
-  if (missing.length) {
-    throw new Error(
-      `Unsupported additional registries: ${missing.join(', ')}. Supported values from broker catalog: ${supportedList.join(', ')}`,
-    );
-  }
-
-  return {
-    requested,
-    supported: supportedList,
-    selected: requested,
-  };
-}
-
 /**
  * @param {string} agentKey
  * @param {{ alias: string, publicBaseUrl: string }} runtime
