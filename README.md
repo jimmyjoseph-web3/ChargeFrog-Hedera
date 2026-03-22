@@ -10,23 +10,150 @@
 
 ## 🐸 Our Deliverables
 
-1. Our Demo Video (Youtube) [🌐Watch It!](https://youtu.be/7yTQuoSmTv4)
+1. Our Demo Video (Youtube) [🌐Watch It!]()
 
-2. Our Pitch Deck (PDF) [🌐Read It!](https://drive.google.com/file/d/15hBYDwsjDUcxFoiLwpcE9h3weL4yLuzJ/view?usp=sharing)
+2. Our Pitch Deck (PDF) [🌐Read It!]()
 
-3. Our Demo DApp (Deployed on Hedera Testnet) [🌐Try It!](https://chargefrog-hedera.vercel.app/)
+3. Our Demo DApp (Deployed on Hedera Testnet) [🌐Try It!]()
 
 ## TL;DR 👉 What is ChargeFrog?
 
-ChargeFrog tackles Europe’s EV charging bottleneck by fixing the supply–demand gap in infrastructure and the credibility crisis in carbon markets.
-It transforms EV stations into fractionalized, ERC-1400 & ERC-3643 Compliant, Reg-S security assets so communities—not just corporations—can fund and own charging infrastructure.
-Users charge, invest, swap credits, and earn all inside one Hedera-powered Super App with transparent on-chain operations.
-Every charging session automatically mints and retires CarbonFrog NFTs through a policy-driven Guardian dMRV system, eliminating greenwashing and proving real CO₂ offsets.
-The result is a community-built, on-chain, self-financing EV network that scales sustainably while generating verifiable carbon impact and investor returns.
+ChargeFrog fixes two broken systems at once: Europe needs more EV chargers, and carbon markets need real proof. We turn EV stations into community-owned, compliant on-chain assets on Hedera, then use a Froggy multi-agent workflow to take a station from demand signal to deployment: `FroggyPlanner` validates neighborhood demand with mini-node registrations and charging data, drafts the investment proposal, `FroggyFoundry` handles approval, deployment, and ERC-1400/ERC-3643 Reg-S equity and bond issuance, and `FroggyGuardian` creates the policy-driven dMRV flow that proves carbon impact on-chain. The result is a single Super App where people can propose, fund, own, use, and audit EV infrastructure end-to-end.
+
+### What’s New
+
+- **Agentic infrastructure rollout:** ChargeFrog is not just tokenizing chargers, it is automating the full station lifecycle through public A2A-ready agents.
+- **Demand before deployment:** New stations are proposed from real community demand signals, neighborhood interest thresholds, POI evidence, and charging availability data.
+- **Compliance and carbon built in:** Every approved station can become a compliant investable asset, while every charging session can feed Guardian-backed CarbonFrog dMRV for verifiable CO₂ impact.
+
+## What has Changed at the Product Level?
+
+<img width="1763" height="991" alt="Image" src="https://github.com/user-attachments/assets/2be138b1-e1af-4726-b016-da5445b9167a" />
+
+> **Old ChargeFrog** was mainly an on-chain EV infrastructure model.  
+> **New ChargeFrog** is an agentic workflow product that can discover, structure, deploy, tokenize, and audit EV infrastructure end-to-end.
+
+Instead of only proving that EV charging, tokenization, and carbon accounting can exist on-chain, ChargeFrog now turns those primitives into a usable product flow. The platform can move from **community demand** to **investment proposal**, from **proposal approval** to **station deployment and security token issuance**, and from **charging activity** to **station-specific Guardian compliance** through one connected workflow.
+
+### From Protocol Primitives to Workflow Product
+
+- **Froggy Agents are now the product surface.** `FroggyChat`, `FroggyPlanner`, `FroggyFoundry`, and `FroggyGuardian` turn ChargeFrog into hosted A2A-ready workflows for discovery, proposal generation, approval, issuance, and compliance.
+- **Agentic site intelligence now drives network expansion.** Instead of manually guessing where to build, ChargeFrog uses mini-node demand registrations, neighborhood thresholds, POI discovery, geospatial reasoning, and charging availability data to identify high-conviction station opportunities.
+- **Hedera asset tokenization is now lifecycle-native.** Once a proposal is approved, ChargeFrog can run a continuous flow for station deployment plus per-station equity and bond issuance using ATS-backed token workflows, making each charger an investable digital security asset.
+- **Guardian is now operational at the station level.** Fully invested stations can trigger dedicated Guardian policy and schema creation, so carbon accounting is no longer abstract network-level reporting, it becomes a verifiable compliance layer tied to each real charging site.
+- **ChargeFrog is now interoperable with agent ecosystems.** The Froggy agents expose public A2A endpoints, agent cards, and HOL Registry Broker compatibility, which makes ChargeFrog composable as an agent-powered infrastructure product rather than a closed demo app.
+
+## 🌟 Proposing a Station (Old vs New)
+
+https://github.com/user-attachments/assets/eefcf15b-c806-4169-9b4d-32612a363893
+
+The original ChargeFrog flow introduced the idea of fractional EV charging investment, but the product experience was still relatively static. Users could browse opportunities, view proposal cards, and manually submit location suggestions, but much of the actual decision-making and progression still depended on separate admin action behind the scenes.
+
+The new version transforms that experience into an agentic workflow.
+
+Instead of relying on standalone UI screens and manual follow-up, users can now express investment intent conversationally. From there, the system can interpret the request, determine whether there is enough demand in a target area, and either record the interest or generate a proposal that moves forward for review. This makes the product feel less like a passive interface and more like an intelligent operating layer.
+
+### Previous Experience
+
+- Static investment and proposal screens
+- Manual location submission flow
+- Limited visibility into what happened after submission
+- Heavier dependence on admin coordination
+- Product validated the concept, but did not actively execute the workflow
+
+### Improved Experience
+
+- Conversational, intent-driven user flow
+- Agent evaluates whether an area has sufficient investor interest
+- Proposal creation becomes part of the product journey
+- Clearer progression from user request to system action
+- Product now participates in execution, not just presentation
+
+## 🌟 Investing in a Station
+
+https://github.com/user-attachments/assets/ed599c05-a304-45c4-b114-c9de6b466d63
+
+The original investment flow only supported **equity investment**. Users could select a station, confirm their purchase, and receive a success screen, but the experience was limited to a single asset path and did not expose much of the underlying execution logic.
+
+The new version expands this into a more capable, agent-driven investment flow by giving **FroggyPlanner tooling access to the Hedera Asset Tokenization SDK**.
+
+Instead of only handling equity purchases, FroggyPlanner can now understand investment intent, resolve the relevant station, and execute the correct tokenization flow for both **equity** and **bond** offerings. This turns the product from a fixed confirmation experience into a more flexible investment interface connected directly to real asset issuance workflows.
+
+### Previous Experience
+
+- Only supported **equity investment**
+- Fixed, single-path purchase flow
+- Limited visibility into how the investment was processed
+- Token issuance flow remained mostly abstracted from the user
+- Product experience ended at confirmation
+
+### Improved Experience
+
+- FroggyPlanner now has tooling capabilities powered by the **Hedera Asset Tokenization SDK**
+- Supports both **equity** and **bond** investment flows
+- Planner can interpret user intent and route to the correct asset flow
+- Investment actions connect directly to minting and issuance workflows
+- Product experience now reflects actual execution, not just final confirmation
+
+## 🌟 Tokenization Flow
+
+https://github.com/user-attachments/assets/704cac19-969f-449b-b496-e23706eb4689
+
+The original tokenization flow was heavily manual and mostly restricted to admin-only interfaces. Creating a new digital security token required filling out dedicated admin forms, while balance checks and approval actions were handled through separate operational panels. Although the system was functional, token creation, approval, and balance retrieval were still fragmented into manual backend workflows.
+
+The new version turns these previously manual admin functions into conversational agent workflows powered by **FroggyPlanner** and **Hedera Asset Tokenization SDK tooling**.
+
+Instead of relying on separate admin dashboards for token creation or balance retrieval, users and admins can now trigger these actions directly through natural-language requests. FroggyPlanner can resolve the relevant station and token context, retrieve **equity** or **bond** balances, and support admin-side operational actions that begin station deployment and digital asset creation with a single reply. This shifts token operations from isolated admin panels into a more accessible and workflow-driven product experience.
+
+### Previous Experience
+
+- Token balance lookup was primarily an **admin-only function**
+- New digital security token creation required **manual form filling**
+- Approval, balance, and tokenization actions were split across multiple admin views
+- Operational flows were functional, but tedious and fragmented
+- Most asset operations depended on manual admin interaction
+
+### Improved Experience
+
+- FroggyPlanner now exposes **token balance lookup** as a conversational workflow
+- Supports checking both **equity** and **bond** token balances
+- Admins can initiate station deployment and token creation through a single conversational flow
+- Token operations are now connected more directly to **Hedera Asset Tokenization SDK** capabilities
+- Product experience moves from manual admin tooling to agent-driven operational execution
+
+## 🌟 Guardian Workflows
+
+https://github.com/user-attachments/assets/9df26ed5-505c-4ff4-9d5a-49211aae5537
+
+The original Guardian workflow was heavily manual. Admins had to create new policies through the Guardian interface, manually create new schemas, and search through the dashboard to retrieve policy or schema information. While the system worked, policy management remained fragmented across multiple admin screens and required repeated operational effort for every new station.
+
+The new version turns this into an agent-driven Guardian workflow.
+
+Instead of manually creating and checking everything through the admin panel, **ChargeFrog Admin** can now trigger these flows conversationally. Once a station is ready, the system can identify eligible fully-invested stations, replicate the required **Guardian policies and schemas** for that station, and return verification output so admins can confirm that replication completed successfully. This shifts Guardian operations from manual setup into a more automated and repeatable workflow.
+
+### Previous Experience
+
+- Creating a new **policy** required manual admin work in Guardian
+- Creating a new **schema** required manual admin work in Guardian
+- Policy and schema information had to be retrieved manually from separate dashboards
+- Admin workflows were repetitive and fragmented
+- Operational scaling depended on manual Guardian setup for each station
+
+### Improved Experience
+
+- **ChargeFrog Admin** can trigger Guardian workflows conversationally
+- System can identify stations that are ready for Guardian replication
+- Policies and schemas can be **replicated** for a station through the new workflow
+- Admins can **verify** that policy and schema replication completed successfully
+- Guardian operations move from manual admin setup to a more automated, reusable process
 
 ## Tackling the Problems of Europe's EV Market
 
-### 1️⃣ The Imbalance Supply and Demand
+### 1️⃣ Most On-Chain RWAs Fail
+
+Most on-chain RWAs fail because they tokenize representation rather than enforceable rights. A token may be transferable on-chain, but the actual shareholder/bondholder rights—who is eligible, what they are entitled to, and how claims are enforced—remain off-chain, ambiguous, or manually administered. This breaks the full asset lifecycle: compliant issuance, identity-gated holding, jurisdiction-aware transfer validation, and deterministic entitlement calculation. Critically, corporate actions are rarely first-class: record dates, snapshots, distributions, redemptions, disclosures, and exceptional events (freezes, forced transfers, replacements, remediation) are often handled by ad-hoc scripts or centralized operators. The net effect is an “audit-after-the-fact” system with brittle controls, inconsistent standards, and high regulatory and counterparty risk—especially as regulators and market standards increasingly demand provable, policy-driven constraints rather than best-effort processes.
+
+### 2️⃣ The Imbalance Supply and Demand
 
 Europe’s electric vehicle (EV) adoption is accelerating far faster than its charging infrastructure can keep up. In 2024, the region recorded approximately 8.8 million registered EVs, and by 2025 that number is projected to climb to 11.8 million, marking a 34% year-over-year increase. However, the expansion of charging infrastructure is lagging behind. Despite a 35% growth in charger installations, Europe will have only 1.09 million public and private chargers by 2025—nowhere near enough to support the rising volume of EVs on the road.
 
@@ -34,7 +161,7 @@ This mismatch is creating a widening structural gap: EV demand is scaling expone
 
 <img width="1309" height="726" alt="Image" src="https://github.com/user-attachments/assets/55ff1710-748f-45b6-9888-3f581b0fc84c" />
 
-### 2️⃣ The Uneven Distributions
+### 3️⃣ The Uneven Distributions
 
 On top of the overall shortage, Europe’s charging infrastructure faces a serious distribution imbalance. The growth of chargers is not evenly spread across member states, creating regional accessibility gaps that worsen the EV charging deficit. A few countries dominate the network, while many others remain severely underserved.
 
@@ -44,7 +171,7 @@ This uneven deployment results in inconsistent charging access, discourages cros
 
 <img width="1298" height="677" alt="Image" src="https://github.com/user-attachments/assets/01525db4-c1a4-456b-9160-23a6d44b3b12" />
 
-### 3️⃣ High Barrier for EV Infra Investments
+### 4️⃣ High Barrier for EV Infra Investments
 
 - **High upfront costs**: Deploying EV chargers—especially high-power DC fast chargers—requires significant capital. A 500 kW+ DC charging station can cost around €104,000, placing it well outside the reach of most individuals or small groups.
 
@@ -113,7 +240,7 @@ Token holders receive multiple benefits:
 
 > ⭐ This transforms infrastructure growth into a community-driven expansion model, where investment, usage, and carbon impact are all transparently enforced on-chain empowering everyday individuals to co-invest, co-govern, and co-build Europe’s next generation of EV charging infrastructure.
 
-## 🐸 We Pack Everything in Our All-in-One Super App
+## 🐸 We Pack Everything in Our All-in-One Super App // PENDING - use new image
 
 <img width="1130" height="1172" alt="Image" src="https://github.com/user-attachments/assets/8a122daa-3078-491f-a3bd-feffe531a207" />
 
@@ -141,7 +268,7 @@ We ensure charging your EV is smooth and simple:
 
 - On-Chain Tracking: We record your charging session on Hedera, providing a secure and verifiable transaction history.
 
-### Invest & Earn Anywhere
+### Invest & Earn Anywhere // PENDING - use new image and description
 
 <img width="1301" height="729" alt="Image" src="https://github.com/user-attachments/assets/2ce3b69e-539e-4a90-99dd-e5c1277d6bd7" />
 
@@ -156,6 +283,8 @@ We allow anyone to own a piece of the growing EV infrastructure:
 <img width="1481" height="831" alt="Image" src="https://github.com/user-attachments/assets/0bf0edd3-2614-49f3-9037-ffe2406a9be7" />
 
 - Claiming Earnings: We make it easy to Claim your revenue distribution in one click. Your monthly payouts from your investments are transferred directly to your wallet in Hedera, fully tracked On-chain.
+
+// PENDING: Arch starts here
 
 ## The Architecture Behind: A Layered Protocol Stack
 
