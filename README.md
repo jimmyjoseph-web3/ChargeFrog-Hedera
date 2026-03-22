@@ -415,10 +415,6 @@ This means a user can simply ask in natural language, while FroggyChat handles t
 - **API integration and orchestration:** calls the correct public A2A endpoint for planner, foundry, or guardian workflows.
 - **Workflow automation:** turns a chat request into a routed, executable ChargeFrog workflow.
 
-### Why It Matters
-
-Without FroggyChat, users and admins would need to know exactly which agent or endpoint to call for each task. With FroggyChat, ChargeFrog behaves like a single intelligent product surface: users ask, FroggyChat routes, and the correct public agent executes the workflow.
-
 ## Agent Overview: FroggyPlanner
 
 <img width="1312" height="732" alt="Image" src="https://github.com/user-attachments/assets/b06628f2-8420-437d-8926-5132c1990fbc" />
@@ -460,10 +456,6 @@ FroggyPlanner supports the main investor and planning intents inside ChargeFrog:
 - **Balance lookup:** “what is my equity balance for station 1?”
 
 In practice, this means the same agent can help identify where the network should expand, package that opportunity into an investable proposal, and then let users buy into the station and verify their holdings on Hedera.
-
-### Why It Matters
-
-Without FroggyPlanner, discovery, proposal writing, token purchase, and balance retrieval would live in separate tools and admin-heavy flows. With FroggyPlanner, ChargeFrog gets a single planner surface that connects site intelligence, proposal orchestration, and tokenized station investment into one conversational product experience.
 
 ## Agent Overview: FroggyFoundry
 
@@ -507,10 +499,6 @@ FroggyFoundry supports the main admin intents inside ChargeFrog:
 
 In practice, this means admin users no longer need to move across disconnected dashboards to review, approve, deploy, and issue. FroggyFoundry turns those actions into one coordinated workflow.
 
-### Why It Matters
-
-Without FroggyFoundry, station deployment and token issuance remain fragmented backend operations. With FroggyFoundry, ChargeFrog gets a dedicated admin execution layer that converts approved proposals into deployed stations and on-chain security assets in a consistent, auditable workflow.
-
 ## Agent Overview: FroggyGuardian
 
 <img width="1311" height="734" alt="Image" src="https://github.com/user-attachments/assets/74c99960-d6ae-406c-b32e-e279da801bd0" />
@@ -552,9 +540,192 @@ FroggyGuardian supports the main Guardian-oriented intents inside ChargeFrog:
 
 In practice, this means admins no longer have to manually navigate Guardian dashboards to inspect, compare, or recreate policy infrastructure for each station.
 
-### Why It Matters
+## How ChargeFrog Utilizes the Hedera Asset Tokenization SDK: Token Initialization(ERC-1400 + ERC-3643)
 
-Without FroggyGuardian, policy inspection and replication remain manual compliance tasks buried inside Guardian’s admin workflows. With FroggyGuardian, ChargeFrog gets a dedicated agent surface for policy intelligence, replication, and verifiable compliance operations tied directly to real stations in the network.
+<img width="1311" height="736" alt="Image" src="https://github.com/user-attachments/assets/ebc9d99a-91e6-4c24-bb8d-8d90a42d4581" />
+
+### Token Initialization — ERC-1400 + ERC-3643
+
+ChargeFrog uses the **Hedera Asset Tokenization SDK** to initialize every EV charging station as its own **regulated digital security product**.
+
+Instead of treating the entire charging network as one pooled asset, we tokenize **station by station**. Each station can carry its own **equity token** and **bond token**, allowing every physical charger to become its own investable on-chain asset with its own ownership, legal structure, and compliance logic.
+
+This initialization flow is powered by **C.R.A.T.E**, our backend layer that runs the Hedera Asset Tokenization SDK and composes the full security architecture for each station asset.
+
+### Station-Level Security Composition
+
+For every station, ChargeFrog creates a digital security structure by combining the standards exposed through the SDK:
+
+- **ERC-20** for balances, wallet compatibility, and asset visibility
+- **ERC-1594** for regulated issuance and transfer semantics
+- **ERC-1410** for partitioned ownership structures
+- **ERC-1643** for legal document anchoring
+- **ERC-1644** for controller intervention and override authority
+- **ERC-3643** for compliance and identity enforcement
+
+Together, these components allow each station token to behave like a real digital security, not just a generic on-chain token.
+
+### What Gets Initialized
+
+Each station asset is composed with multiple layers:
+
+#### Asset Composition Layer
+
+Every station starts with two tokenized financial instruments:
+
+- **Equity Token**
+- **Bond Token**
+
+This gives ChargeFrog a way to represent both ownership exposure and debt-style financing at the station level.
+
+#### Token Composition Layer
+
+The SDK is used to define the asset’s internal financial logic:
+
+- balances and issuance rules
+- legal and cashflow rails
+- partitioned ownership
+- compliance gates
+- controller permissions
+
+#### Governance and Access Control Layer
+
+Station assets are initialized with role-based access and governance functions, including:
+
+- agent execution authority
+- issuer permissions
+- document management authority
+- controller-level administrative power
+
+This makes the token model operationally usable inside ChargeFrog’s agent workflows.
+
+#### Token Interface Layer
+
+ChargeFrog activates the interface and issuance semantics required for real asset operations:
+
+- **ERC-20** for balances and wallet/explorer visibility
+- **ERC-1594** for regulated issuance, transfer, and redemption behavior
+
+#### Compliance and Identity Layer
+
+Using **ERC-3643**, ChargeFrog connects station assets to identity and compliance checks so that holding, transfer, and issuance rules can be enforced before any asset movement occurs.
+
+#### Intervention Layer
+
+Using **ERC-1644**, the asset model supports controller-level intervention when needed, including override authority, exceptional transfer control, and auditable administrative actions.
+
+#### Ownership Structuring Layer
+
+Using **ERC-1410**, ChargeFrog enables partitioned balances so station ownership can be segmented and managed under rule-based unlock conditions.
+
+#### Regulation Layer
+
+ChargeFrog configures station assets with regulatory constraints, such as restricted issuance or restricted buy/sell flows, so compliance is embedded directly into the token model.
+
+#### Legal Anchoring Layer
+
+Using **ERC-1643**, legal documents are anchored directly to the station asset through document references and hashes. This allows every tokenized station to carry legal linkage as part of its security structure.
+
+#### Financial Operations Layer
+
+Once initialized, each station asset can support downstream financial logic such as:
+
+- ownership snapshots
+- allocation sets
+- regulated payout distributions
+- token-driven cashflow operations
+
+### Why This Matters
+
+The Hedera Asset Tokenization SDK is not just used by ChargeFrog to mint tokens.
+
+It is used to define the **full security architecture** of every station from day one — ownership model, compliance gates, legal anchoring, controller authority, issuance semantics, and asset visibility.
+
+That means every ChargeFrog station is initialized as its own **compliant, programmable, and investable on-chain financial product**.
+
+## How ChargeFrog Utilizes the Hedera Asset Tokenization SDK: Investment
+
+<img width="1309" height="736" alt="Image" src="https://github.com/user-attachments/assets/230e254b-30e0-4b79-8fed-37a5690ee42e" />
+
+ChargeFrog uses the **Hedera Asset Tokenization SDK** to power the live investment flow for each tokenized EV charging station.
+
+Once a station has been initialized as its own digital security product, the SDK becomes the engine that allows investors to interact with that station as a real on-chain investment opportunity.
+
+This flow is powered through **C.R.A.T.E**, our backend layer running the Hedera Asset Tokenization SDK, and exposed through ChargeFrog’s agentic workflow system.
+
+### From User Intent to Tokenized Investment
+
+The investment experience begins with **FroggyPlanner**.
+
+FroggyPlanner connects investor intent directly to tokenized station opportunities by using the SDK-backed backend to:
+
+- surface available station investment options
+- retrieve investor balances and holdings
+- identify which station-specific asset the investor wants exposure to
+
+Instead of sending users into a disconnected issuance system, ChargeFrog keeps discovery and execution inside one agentic workflow.
+
+### Regulated Investment Flow
+
+Once an investor selects a station and transfers **HBAR**, the system can move through a regulated issuance path backed by the Hedera Asset Tokenization SDK.
+
+The flow includes:
+
+1. **Eligibility check**  
+   The investor is evaluated against the rules required to access the station-specific asset.
+
+2. **Compliance and regulation check**  
+   Identity, permissions, and transfer restrictions are enforced before issuance proceeds.
+
+3. **Treasury receives funds**  
+   The station treasury receives the incoming HBAR for the investment transaction.
+
+4. **Security tokens are issued**  
+   The correct station-specific **equity token** or **bond token** is issued to the investor.
+
+5. **Balances are updated**  
+   The investor’s token balances are updated for visibility and wallet compatibility.
+
+6. **Ownership partitions are assigned**  
+   Partition logic can be applied where ownership needs structured segmentation.
+
+7. **Transfer and holding rules are enforced**  
+   Compliance-aware restrictions remain active after issuance, not just before it.
+
+8. **On-chain events are emitted**  
+   The entire issuance flow becomes observable and auditable through emitted on-chain actions.
+
+### Role of the Agents
+
+ChargeFrog does not use the SDK as a passive backend utility. It is integrated directly into our agents.
+
+#### FroggyPlanner
+
+FroggyPlanner acts as the investor-facing orchestration layer. It helps users discover station opportunities, understand availability, and connect their investment intent to a specific tokenized charger.
+
+#### FroggyFoundry
+
+FroggyFoundry acts as the execution layer. Once the investment path is ready, it can create and issue the station-specific equity and bond tokens required for the transaction.
+
+Together, these agents turn the Hedera Asset Tokenization SDK into a live operational system rather than a one-time setup tool.
+
+### Why This Matters
+
+Most tokenization demos stop at asset creation.
+
+ChargeFrog goes further by using the Hedera Asset Tokenization SDK inside a real investment workflow where infrastructure assets can be:
+
+- discovered
+- evaluated
+- funded
+- issued
+- updated
+- enforced
+- tracked on-chain
+
+So the SDK is not just used to mint station tokens. It is used to make every tokenized station **investable in practice**.
+
+The result is that each EV station in ChargeFrog can function as its own **compliant, investable, and operationally issuable digital security product**, with agentic workflows connecting user intent directly to real on-chain asset execution.
 
 ## 🕵🏻 Auditing ChargeFrog on Hedera with Guardian
 
