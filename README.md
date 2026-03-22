@@ -45,7 +45,7 @@ Instead of only proving that EV charging, tokenization, and carbon accounting ca
 
 ## 🌟 Proposing a Station (Old vs New)
 
-https://github.com/user-attachments/assets/eefcf15b-c806-4169-9b4d-32612a363893
+https://github.com/user-attachments/assets/a1d06076-b3d7-40e7-b4c7-4c578093a50d
 
 The original ChargeFrog flow introduced the idea of fractional EV charging investment, but the product experience was still relatively static. Users could browse opportunities, view proposal cards, and manually submit location suggestions, but much of the actual decision-making and progression still depended on separate admin action behind the scenes.
 
@@ -71,7 +71,7 @@ Instead of relying on standalone UI screens and manual follow-up, users can now 
 
 ## 🌟 Investing in a Station
 
-https://github.com/user-attachments/assets/ed599c05-a304-45c4-b114-c9de6b466d63
+https://github.com/user-attachments/assets/f615d89a-2ccc-465c-a129-d6013ba9c458
 
 The original investment flow only supported **equity investment**. Users could select a station, confirm their purchase, and receive a success screen, but the experience was limited to a single asset path and did not expose much of the underlying execution logic.
 
@@ -97,7 +97,7 @@ Instead of only handling equity purchases, FroggyPlanner can now understand inve
 
 ## 🌟 Tokenization Flow
 
-https://github.com/user-attachments/assets/704cac19-969f-449b-b496-e23706eb4689
+https://github.com/user-attachments/assets/94f67692-15cc-4bc1-91ac-c769392028f7
 
 The original tokenization flow was heavily manual and mostly restricted to admin-only interfaces. Creating a new digital security token required filling out dedicated admin forms, while balance checks and approval actions were handled through separate operational panels. Although the system was functional, token creation, approval, and balance retrieval were still fragmented into manual backend workflows.
 
@@ -123,7 +123,7 @@ Instead of relying on separate admin dashboards for token creation or balance re
 
 ## 🌟 Guardian Workflows
 
-https://github.com/user-attachments/assets/9df26ed5-505c-4ff4-9d5a-49211aae5537
+https://github.com/user-attachments/assets/4d8edc33-e226-4029-9ba4-934757994f94
 
 The original Guardian workflow was heavily manual. Admins had to create new policies through the Guardian interface, manually create new schemas, and search through the dashboard to retrieve policy or schema information. While the system worked, policy management remained fragmented across multiple admin screens and required repeated operational effort for every new station.
 
