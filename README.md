@@ -226,7 +226,7 @@ Together, these policies represent a rare alignment of political will, financial
 
 ## ChargeFrog: A New Operating Model on Hedera
 
-<img width="1489" height="835" alt="Image" src="https://github.com/user-attachments/assets/b74219b8-1616-4cb4-a7e5-4657a25aa1b7" />
+<img width="1315" height="737" alt="Image" src="https://github.com/user-attachments/assets/e4fd7b1e-d16e-49f8-8613-238f13659f91" />
 
 ChargeFrog introduces a community-led EV charging network model that is not just tokenized, but operationally agentic. Through `FroggyChat`, `FroggyPlanner`, `FroggyFoundry`, and `FroggyGuardian`, the product exposes public A2A workflows that can route natural-language requests across station discovery, proposal generation, deployment approval, asset issuance, and Guardian policy operations. What used to be fragmented admin work is now a connected product flow.
 
