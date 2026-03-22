@@ -511,7 +511,6 @@ In practice, this means admin users no longer need to move across disconnected d
 
 Without FroggyFoundry, station deployment and token issuance remain fragmented backend operations. With FroggyFoundry, ChargeFrog gets a dedicated admin execution layer that converts approved proposals into deployed stations and on-chain security assets in a consistent, auditable workflow.
 
-
 ## Agent Overview: FroggyGuardian
 
 <img width="1311" height="734" alt="Image" src="https://github.com/user-attachments/assets/74c99960-d6ae-406c-b32e-e279da801bd0" />
@@ -558,6 +557,45 @@ In practice, this means admins no longer have to manually navigate Guardian dash
 Without FroggyGuardian, policy inspection and replication remain manual compliance tasks buried inside Guardian’s admin workflows. With FroggyGuardian, ChargeFrog gets a dedicated agent surface for policy intelligence, replication, and verifiable compliance operations tied directly to real stations in the network.
 
 ## 🕵🏻 Auditing ChargeFrog on Hedera with Guardian
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/f05f5e1a-4c59-428a-8399-909aab56224b" width="677" height="688" alt="Image" />
+</p
+
+ChargeFrog directly addresses the Voluntary Carbon Market (VCM) credibility crisis, where traditional "analog" Monitoring, Reporting, and Verification (MRV) processes are often retrospective, slow, and opaque. This lack of transparency makes genuine green claims vulnerable to "greenwashing" allegations and investor skepticism.
+
+To solve this, **ChargeFrog leverages the Hedera Guardian platform** to implement a **Digital MRV (dMRV) system**. This creates a high-trust, automated environment where every charging session contributes to a full carbon accountability cycle: emissions are tracked, verified, and offset in real-time using immutable data.
+
+### The Automated Carbon Lifecycle
+
+The system operates through two distinct, policy-driven scenarios that generate an immutable audit trail via **Verifiable Credentials (VC)** and **Verifiable Presentations (VP)**.
+
+### 1. Mint Scenario: Real-Time Accumulation
+
+As users charge their EVs, the system tracks carbon offsets at a granular level.
+
+- **The Trigger:** For every **100g of CO2 offset** via physical charging, the system triggers the Carbon Offset Policy.
+- **The Action:** The policy automatically **mints a unique "CarbonFrog" NFT**.
+- **The Flow:** This NFT is transferred from the ChargeFrog Treasury to a designated Admin account.
+- **The Proof:** Simultaneously, a **VC-VP pair is generated on-chain**, linking the digital token directly to the physical charging data, proving the offset is real and unique.
+
+### 2. Retire Scenario: Cyclical Finality
+
+To ensure offsets are not double-counted or resold, the system enforces a **retirement logic**.
+
+- **The Trigger:** Once the accumulated offsets reach **1kg of CO2**, the Token Retire Policy is activated.
+- **The Action:** The system executes a **Retire Scenario**, which "wipes" (burns) the CarbonFrog NFT from the ledger in 1kg increments.
+- **The Audit:** This retirement action is **permanently recorded on the Hedera ledger**.
+
+### Transparency & Verification
+
+This architecture provides an **irreversible proof of action**. By clicking on the generated Hashscan links within the ChargeFrog app, users and auditors can:
+
+- View the Treasury’s operations in real-time
+- Verify that a token was minted when a car was charged
+- Confirm it was subsequently retired to finalize the offset
+
+This eliminates the "black box" of traditional carbon credits, replacing it with a **transparent, on-chain history** that confirms high-integrity sustainability.
 
 ## 💳 Optimizing Charging Economics with BOLT (ERC-20 Token)
 
@@ -608,47 +646,6 @@ The **Station Registry** maps each unique Station ID to a structured record cont
 - **Shares Issued:** Quantity of **ERC-1400 & ERC-3643 compliant Station Equity** tokens minted for investors.
 - **Funding Progress:** Percentage of the funding goal achieved.
 - **Operational Status:** Current lifecycle state, determining when the station is active and generating revenue.
-
-## 📊 Transparent Revenue Sharing & Pro-Rata Claims for Investors
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/f05f5e1a-4c59-428a-8399-909aab56224b" width="677" height="688" alt="Image" />
-</p
-
-ChargeFrog directly addresses the Voluntary Carbon Market (VCM) credibility crisis, where traditional "analog" Monitoring, Reporting, and Verification (MRV) processes are often retrospective, slow, and opaque. This lack of transparency makes genuine green claims vulnerable to "greenwashing" allegations and investor skepticism.
-
-To solve this, **ChargeFrog leverages the Hedera Guardian platform** to implement a **Digital MRV (dMRV) system**. This creates a high-trust, automated environment where every charging session contributes to a full carbon accountability cycle: emissions are tracked, verified, and offset in real-time using immutable data.
-
-### The Automated Carbon Lifecycle
-
-The system operates through two distinct, policy-driven scenarios that generate an immutable audit trail via **Verifiable Credentials (VC)** and **Verifiable Presentations (VP)**.
-
-### 1. Mint Scenario: Real-Time Accumulation
-
-As users charge their EVs, the system tracks carbon offsets at a granular level.
-
-- **The Trigger:** For every **100g of CO2 offset** via physical charging, the system triggers the Carbon Offset Policy.
-- **The Action:** The policy automatically **mints a unique "CarbonFrog" NFT**.
-- **The Flow:** This NFT is transferred from the ChargeFrog Treasury to a designated Admin account.
-- **The Proof:** Simultaneously, a **VC-VP pair is generated on-chain**, linking the digital token directly to the physical charging data, proving the offset is real and unique.
-
-### 2. Retire Scenario: Cyclical Finality
-
-To ensure offsets are not double-counted or resold, the system enforces a **retirement logic**.
-
-- **The Trigger:** Once the accumulated offsets reach **1kg of CO2**, the Token Retire Policy is activated.
-- **The Action:** The system executes a **Retire Scenario**, which "wipes" (burns) the CarbonFrog NFT from the ledger in 1kg increments.
-- **The Audit:** This retirement action is **permanently recorded on the Hedera ledger**.
-
-### Transparency & Verification
-
-This architecture provides an **irreversible proof of action**. By clicking on the generated Hashscan links within the ChargeFrog app, users and auditors can:
-
-- View the Treasury’s operations in real-time
-- Verify that a token was minted when a car was charged
-- Confirm it was subsequently retired to finalize the offset
-
-This eliminates the "black box" of traditional carbon credits, replacing it with a **transparent, on-chain history** that confirms high-integrity sustainability.
 
 ## 🌍 The Business: Our Vision and Strategy
 
@@ -742,13 +739,21 @@ We focus on three core metrics to validate our model and drive adoption:
 
 ## 🛣️ What's next in our developer roadmap?
 
-<img width="1490" height="837" alt="Image" src="https://github.com/user-attachments/assets/6c2a2240-ac58-415d-9379-ada416085280" />
+<img width="1306" height="735" alt="Image" src="https://github.com/user-attachments/assets/4b93badd-e794-45ee-9ed4-178ddb0f1e6b" />
 
 We have successfully completed the **MVP + Pilot on Hedera Testnet**, featuring a mobile-based EV charging super app with real-life pilot station integration. Our next steps involve expanding functionality and preparing for mainnet launch:
 
-- **Live on Hedera Mainnet:** Mainnet deployment of Smart Contracts, Equity Tokens, and Guardian policies.
-- **Introduce Hedera AI Studio:** This agent will assist network investors to perform analysis on proposed locations and list out high ROI potential options, adding value to the community investment process.
-- **ChargeFrog ReFI :** User-selected payment round-up sends fractional change to an Impact Fund; users receive a Proof-of-Impact governance token.
+### Shipped
+
+- **MVP + Pilot on Hedera Testnet:** We have already shipped a mobile EV charging super app on Hedera testnet with real-world pilot station integration and compliant asset tokenization.
+- **Introduce Agentic AI:** We have introduced public A2A agents registered on HOL Registry, expanding ChargeFrog with agentic planning, deployment, issuance, and Guardian workflow capabilities on Hedera.
+
+### Next Up
+
+- **Testnet to Mainnet:** Mainnet deployment of ChargeFrog smart contracts, equity tokens, and Guardian policies.
+- **Community Hardware Expansion:** Release the open-source **ChargeFrog Pi** EVSE controller build on Raspberry Pi to extend the network through community-operated hardware.
+
+And more releases are coming soon.
 
 ## 🤝 The Minds Behind ChargeFrog
 
