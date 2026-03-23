@@ -1,28 +1,159 @@
 <div align="center">
     <img src="https://github.com/user-attachments/assets/8397eba5-dbe5-441c-8f02-e9b71ebbc2f2" width=200>
     <h1>ChargeFrog</h1>
-    <strong>A sustainable community-led EV charging network across Europe</strong>
+    <strong>A community-powered, agent-driven platform for financing and deploying EV charging infrastructure</strong>
 </div>
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/c2865377-61ce-4894-aff1-1841b9fe18f1" width="3690" height="427" alt="Image" />
+  <img src="https://github.com/user-attachments/assets/676d6e72-a57a-4d25-a5ab-89dda22a828b" width="3690" height="427" alt="Image" />
 </p>
 
 ## 🐸 Our Deliverables
 
-1. Our Demo Video (Youtube) [🌐Watch It!](https://youtu.be/7yTQuoSmTv4)
+1. Our Demo Video (Youtube) [🌐Watch It!]()
 
-2. Our Pitch Deck (PDF) [🌐Read It!](https://drive.google.com/file/d/15hBYDwsjDUcxFoiLwpcE9h3weL4yLuzJ/view?usp=sharing)
+2. Our Pitch Deck (PDF) [🌐Read It!]()
 
-3. Our Demo DApp (Deployed on Hedera Testnet) [🌐Try It!](https://chargefrog-hedera.vercel.app/)
+3. Our Demo DApp (Deployed on Hedera Testnet) [🌐Try It!]()
 
 ## TL;DR 👉 What is ChargeFrog?
 
-ChargeFrog tackles Europe’s EV charging bottleneck by fixing the supply–demand gap in infrastructure and the credibility crisis in carbon markets.
-It transforms EV stations into fractionalized, ERC-1400 & ERC-3643 Compliant, Reg-S security assets so communities—not just corporations—can fund and own charging infrastructure.
-Users charge, invest, swap credits, and earn all inside one Hedera-powered Super App with transparent on-chain operations.
-Every charging session automatically mints and retires CarbonFrog NFTs through a policy-driven Guardian dMRV system, eliminating greenwashing and proving real CO₂ offsets.
-The result is a community-built, on-chain, self-financing EV network that scales sustainably while generating verifiable carbon impact and investor returns.
+ChargeFrog fixes two broken systems at once: Europe needs more EV chargers, and carbon markets need real proof. We turn EV stations into community-owned, compliant on-chain assets on Hedera, then use a Froggy multi-agent workflow to take a station from demand signal to deployment: `FroggyPlanner` validates neighborhood demand with mini-node registrations and charging data, drafts the investment proposal, `FroggyFoundry` handles approval, deployment, and ERC-1400/ERC-3643 Reg-S equity and bond issuance, and `FroggyGuardian` creates the policy-driven dMRV flow that proves carbon impact on-chain. The result is a single Super App where people can propose, fund, own, use, and audit EV infrastructure end-to-end.
+
+### What’s New
+
+- **Agentic infrastructure rollout:** ChargeFrog is not just tokenizing chargers, it is automating the full station lifecycle through public A2A-ready agents.
+- **Demand before deployment:** New stations are proposed from real community demand signals, neighborhood interest thresholds, POI evidence, and charging availability data.
+- **Compliance and carbon built in:** Every approved station can become a compliant investable asset, while every charging session can feed Guardian-backed CarbonFrog dMRV for verifiable CO₂ impact.
+
+## What has Changed at the Product Level?
+
+<img width="1763" height="991" alt="Image" src="https://github.com/user-attachments/assets/2be138b1-e1af-4726-b016-da5445b9167a" />
+
+> **Old ChargeFrog** was mainly an on-chain EV infrastructure model.  
+> **New ChargeFrog** is an agentic workflow product that can discover, structure, deploy, tokenize, and audit EV infrastructure end-to-end.
+
+Instead of only proving that EV charging, tokenization, and carbon accounting can exist on-chain, ChargeFrog now turns those primitives into a usable product flow. The platform can move from **community demand** to **investment proposal**, from **proposal approval** to **station deployment and security token issuance**, and from **charging activity** to **station-specific Guardian compliance** through one connected workflow.
+
+### From Protocol Primitives to Workflow Product
+
+- **Froggy Agents are now the product surface.** `FroggyChat`, `FroggyPlanner`, `FroggyFoundry`, and `FroggyGuardian` turn ChargeFrog into hosted A2A-ready workflows for discovery, proposal generation, approval, issuance, and compliance.
+- **Agentic site intelligence now drives network expansion.** Instead of manually guessing where to build, ChargeFrog uses mini-node demand registrations, neighborhood thresholds, POI discovery, geospatial reasoning, and charging availability data to identify high-conviction station opportunities.
+- **Hedera asset tokenization is now lifecycle-native.** Once a proposal is approved, ChargeFrog can run a continuous flow for station deployment plus per-station equity and bond issuance using ATS-backed token workflows, making each charger an investable digital security asset.
+- **Guardian is now operational at the station level.** Fully invested stations can trigger dedicated Guardian policy and schema creation, so carbon accounting is no longer abstract network-level reporting, it becomes a verifiable compliance layer tied to each real charging site.
+- **ChargeFrog is now interoperable with agent ecosystems.** The Froggy agents expose public A2A endpoints, agent cards, and HOL Registry Broker compatibility, which makes ChargeFrog composable as an agent-powered infrastructure product rather than a closed demo app.
+
+## 🌟 Proposing a Station (Old vs New)
+
+https://github.com/user-attachments/assets/a1d06076-b3d7-40e7-b4c7-4c578093a50d
+
+The original ChargeFrog flow introduced the idea of fractional EV charging investment, but the product experience was still relatively static. Users could browse opportunities, view proposal cards, and manually submit location suggestions, but much of the actual decision-making and progression still depended on separate admin action behind the scenes.
+
+The new version transforms that experience into an agentic workflow.
+
+Instead of relying on standalone UI screens and manual follow-up, users can now express investment intent conversationally. From there, the system can interpret the request, determine whether there is enough demand in a target area, and either record the interest or generate a proposal that moves forward for review. This makes the product feel less like a passive interface and more like an intelligent operating layer.
+
+### Previous Experience
+
+- Static investment and proposal screens
+- Manual location submission flow
+- Limited visibility into what happened after submission
+- Heavier dependence on admin coordination
+- Product validated the concept, but did not actively execute the workflow
+
+### Improved Experience
+
+- Conversational, intent-driven user flow
+- Agent evaluates whether an area has sufficient investor interest
+- Proposal creation becomes part of the product journey
+- Clearer progression from user request to system action
+- Product now participates in execution, not just presentation
+
+## 🌟 Investing in a Station
+
+https://github.com/user-attachments/assets/f615d89a-2ccc-465c-a129-d6013ba9c458
+
+The original investment flow only supported **equity investment**. Users could select a station, confirm their purchase, and receive a success screen, but the experience was limited to a single asset path and did not expose much of the underlying execution logic.
+
+The new version expands this into a more capable, agent-driven investment flow by giving **FroggyPlanner tooling access to the Hedera Asset Tokenization SDK**.
+
+Instead of only handling equity purchases, FroggyPlanner can now understand investment intent, resolve the relevant station, and execute the correct tokenization flow for both **equity** and **bond** offerings. This turns the product from a fixed confirmation experience into a more flexible investment interface connected directly to real asset issuance workflows.
+
+### Previous Experience
+
+- Only supported **equity investment**
+- Fixed, single-path purchase flow
+- Limited visibility into how the investment was processed
+- Token issuance flow remained mostly abstracted from the user
+- Product experience ended at confirmation
+
+### Improved Experience
+
+- FroggyPlanner now has tooling capabilities powered by the **Hedera Asset Tokenization SDK**
+- Supports both **equity** and **bond** investment flows
+- Planner can interpret user intent and route to the correct asset flow
+- Investment actions connect directly to minting and issuance workflows
+- Product experience now reflects actual execution, not just final confirmation
+
+## 🌟 Tokenization Flow
+
+https://github.com/user-attachments/assets/94f67692-15cc-4bc1-91ac-c769392028f7
+
+The original tokenization flow was heavily manual and mostly restricted to admin-only interfaces. Creating a new digital security token required filling out dedicated admin forms, while balance checks and approval actions were handled through separate operational panels. Although the system was functional, token creation, approval, and balance retrieval were still fragmented into manual backend workflows.
+
+The new version turns these previously manual admin functions into conversational agent workflows powered by **FroggyPlanner** and **Hedera Asset Tokenization SDK tooling**.
+
+Instead of relying on separate admin dashboards for token creation or balance retrieval, users and admins can now trigger these actions directly through natural-language requests. FroggyPlanner can resolve the relevant station and token context, retrieve **equity** or **bond** balances, and support admin-side operational actions that begin station deployment and digital asset creation with a single reply. This shifts token operations from isolated admin panels into a more accessible and workflow-driven product experience.
+
+### Previous Experience
+
+- Token balance lookup was primarily an **admin-only function**
+- New digital security token creation required **manual form filling**
+- Approval, balance, and tokenization actions were split across multiple admin views
+- Operational flows were functional, but tedious and fragmented
+- Most asset operations depended on manual admin interaction
+
+### Improved Experience
+
+- FroggyPlanner now exposes **token balance lookup** as a conversational workflow
+- Supports checking both **equity** and **bond** token balances
+- Admins can initiate station deployment and token creation through a single conversational flow
+- Token operations are now connected more directly to **Hedera Asset Tokenization SDK** capabilities
+- Product experience moves from manual admin tooling to agent-driven operational execution
+
+## 🌟 Guardian Workflows
+
+https://github.com/user-attachments/assets/4d8edc33-e226-4029-9ba4-934757994f94
+
+The original Guardian workflow was heavily manual. Admins had to create new policies through the Guardian interface, manually create new schemas, and search through the dashboard to retrieve policy or schema information. While the system worked, policy management remained fragmented across multiple admin screens and required repeated operational effort for every new station.
+
+The new version turns this into an agent-driven Guardian workflow.
+
+Instead of manually creating and checking everything through the admin panel, **ChargeFrog Admin** can now trigger these flows conversationally. Once a station is ready, the system can identify eligible fully-invested stations, replicate the required **Guardian policies and schemas** for that station, and return verification output so admins can confirm that replication completed successfully. This shifts Guardian operations from manual setup into a more automated and repeatable workflow.
+
+### Previous Experience
+
+- Creating a new **policy** required manual admin work in Guardian
+- Creating a new **schema** required manual admin work in Guardian
+- Policy and schema information had to be retrieved manually from separate dashboards
+- Admin workflows were repetitive and fragmented
+- Operational scaling depended on manual Guardian setup for each station
+
+### Improved Experience
+
+- **ChargeFrog Admin** can trigger Guardian workflows conversationally
+- System can identify stations that are ready for Guardian replication
+- Policies and schemas can be **replicated** for a station through the new workflow
+- Admins can **verify** that policy and schema replication completed successfully
+- Guardian operations move from manual admin setup to a more automated, reusable process
+
+## Tackling the Challenges of Real-World Asset Tokenization
+
+### Most On-Chain RWAs Fail
+
+<img width="1309" height="735" alt="Image" src="https://github.com/user-attachments/assets/5236a032-298c-440d-8953-e1e2786f7216" />
+
+Most on-chain RWAs fail because they tokenize representation rather than enforceable rights. A token may be transferable on-chain, but the actual shareholder/bondholder rights—who is eligible, what they are entitled to, and how claims are enforced—remain off-chain, ambiguous, or manually administered. This breaks the full asset lifecycle: compliant issuance, identity-gated holding, jurisdiction-aware transfer validation, and deterministic entitlement calculation. Critically, corporate actions are rarely first-class: record dates, snapshots, distributions, redemptions, disclosures, and exceptional events (freezes, forced transfers, replacements, remediation) are often handled by ad-hoc scripts or centralized operators. The net effect is an “audit-after-the-fact” system with brittle controls, inconsistent standards, and high regulatory and counterparty risk—especially as regulators and market standards increasingly demand provable, policy-driven constraints rather than best-effort processes.
 
 ## Tackling the Problems of Europe's EV Market
 
@@ -95,15 +226,15 @@ Together, these policies represent a rare alignment of political will, financial
 
 ## ChargeFrog: A New Operating Model on Hedera
 
-<img width="1489" height="835" alt="Image" src="https://github.com/user-attachments/assets/b74219b8-1616-4cb4-a7e5-4657a25aa1b7" />
+<img width="1315" height="737" alt="Image" src="https://github.com/user-attachments/assets/e4fd7b1e-d16e-49f8-8613-238f13659f91" />
 
-We introduce a community-led EV charging network model designed to make infrastructure ownership inclusive, transparent, and open to all. At the heart of this model is the ChargeFrog Network, seamlessly integrated with the Hedera ecosystem, where every station’s operational data, revenue flow, equity activity, and charging events are recorded on-chain—ensuring full transparency and trust.
+ChargeFrog introduces a community-led EV charging network model that is not just tokenized, but operationally agentic. Through `FroggyChat`, `FroggyPlanner`, `FroggyFoundry`, and `FroggyGuardian`, the product exposes public A2A workflows that can route natural-language requests across station discovery, proposal generation, deployment approval, asset issuance, and Guardian policy operations. What used to be fragmented admin work is now a connected product flow.
 
-Each new charging station is fractionally funded through compliant on-chain asset tokenization, enabling small investors across the Hedera community to participate by submitting investment requests for ERC-1400 & ERC-3643 Compliant , Reg-S Station Equity tokens. Instead of requiring large upfront capital, individuals collectively co-own real charging infrastructure, lowering the barrier to entry while formalizing each station as a Hedera-native Real-World Asset with transparent records of share supply, circulation, and investment history.
+The network itself is fully on-chain on Hedera. Station ownership, revenue flow, equity activity, charging events, and governance are transparently recorded so the network can operate without gatekeepers or centralized monopolies. Each station can be formalized as a compliant digital security asset through per-station ERC-1400 & ERC-3643-compliant Reg-S equity and bond issuance, allowing the community to co-own real charging infrastructure with transparent asset histories.
 
-To support the ecosystem, we introduce Bolt, an on-chain ERC-20 charging credit that users can swap, hold, and spend directly at ChargeFrog stations. This forms a transparent circular charging economy where payments, consumption, and revenue distribution are provable end-to-end—while carbon offsets generated from charging sessions are tracked through the Hedera Guardian, which mints CarbonFrog NFTs every 100g and retires them in 1kg increments to create an immutable dMRV audit trail.
+ChargeFrog also introduces transparent charging economics through `$BOLT`, the network’s charging payment asset. `$BOLT` is used inside authorized ChargeFrog stations, making charging payments, station revenue flow, and investor distributions provable end-to-end. These assets are designed with utility as well: investors gain exposure not only to station revenue, but also to network perks and community-led expansion through the ability to propose and shape future station locations.
 
-Token holders receive multiple benefits:
+Digital security token holders receive multiple benefits:
 
 - Revenue sharing from the stations they co-own
 
@@ -111,17 +242,17 @@ Token holders receive multiple benefits:
 
 - Governance rights, including the ability to propose new station locations
 
-> ⭐ This transforms infrastructure growth into a community-driven expansion model, where investment, usage, and carbon impact are all transparently enforced on-chain empowering everyday individuals to co-invest, co-govern, and co-build Europe’s next generation of EV charging infrastructure.
+> This transforms infrastructure growth into a community-driven expansion model, where investment, usage, and carbon impact are all transparently enforced on-chain empowering everyday individuals to co-invest, co-govern, and co-build Europe’s next generation of EV charging infrastructure.
 
 ## 🐸 We Pack Everything in Our All-in-One Super App
 
-<img width="1130" height="1172" alt="Image" src="https://github.com/user-attachments/assets/8a122daa-3078-491f-a3bd-feffe531a207" />
+<img width="981" height="572" alt="Image" src="https://github.com/user-attachments/assets/7ecc2648-1498-4984-8659-739856c875bf" />
 
-At ChargeFrog, we have created a single Super App that unites EV charging, decentralized investment, and reward management. We built ChargeFrog on Hedera to be secure, transparent, and fully on-chain:
+At ChargeFrog, everything is packed into one Super App. Users can discover nearby stations, navigate to them, start and monitor live charging sessions, invest in upcoming station proposals through FroggyPlanner, and track earnings from the assets they own. We built ChargeFrog on Hedera so charging activity, investment flows, and revenue claims remain transparent, verifiable, and connected in one product surface:
 
-- Simplified Asset Management: Swap HBAR for Bolt charging credits, invest in ERC-1400 & ERC-3643 Compliant, Reg-S Station Equity tokens, claim your revenue share, and manage your profile—all in one place with verifiable on-chain records.
+- **Unified charging and ownership experience:** Swap HBAR for Bolt charging credits, invest in ERC-1400 & ERC-3643 compliant Reg-S station equity, claim revenue share, and manage your position without leaving the app.
 
-- Shaping the Network: Participate in the growth of our network by proposing new station locations and submitting them for the next investment round, empowering you to co-govern and co-build the network.
+- **One app for network participation:** Move from finding a station, to charging, to investing, to checking your earnings in a single mobile experience, while still helping shape where the network expands next.
 
 ### ⚡️ A Unified Charging Experience
 
@@ -141,15 +272,19 @@ We ensure charging your EV is smooth and simple:
 
 - On-Chain Tracking: We record your charging session on Hedera, providing a secure and verifiable transaction history.
 
-### Invest & Earn Anywhere
+### Invest in Upcoming Station Proposals
 
-<img width="1301" height="729" alt="Image" src="https://github.com/user-attachments/assets/2ce3b69e-539e-4a90-99dd-e5c1277d6bd7" />
+<img width="1309" height="735" alt="Image" src="https://github.com/user-attachments/assets/409c6b41-288b-43ca-8d84-b531e180aac5" />
 
-We allow anyone to own a piece of the growing EV infrastructure:
+Investment is now through a conversational, on-chain workflow with the help of FroggyPlanner. Instead of navigating fragmented admin screens or complex forms, users can discover investable station proposals, express investment intent in natural language, submit purchases in HBAR, and verify ownership directly on Hedera.
 
-- Fractional Investment: Invest in upcoming station proposals by purchasing ERC-1400 & ERC-3643 Compliant, Reg-S Station Equity tokens using HBAR. This lets you Own a Piece of Every Charge while participating in the community-driven network.
+- **Conversational investment flow:** FroggyPlanner can surface the current investable station list, let users invest into a proposal like Prospect Park, and turn simple requests into structured purchase actions through the app.
 
-- Projected Revenue & Perks: View clear financial breakdowns for each proposal, including estimated costs, projected revenue, and payback periods. Investors also enjoy network perks, such as discounted charging sessions at the stations they co-own.
+- **Simple HBAR-to-share participation:** In the current demo flow, users can invest with a straightforward `1 HBAR = 1 share token` entry point, making early infrastructure ownership far more accessible to the community.
+
+- **On-chain ownership and balance checks:** After investing, users can check their equity balances on Hedera, giving them transparent proof of how much of each station proposal they own.
+
+- **Utility beyond ownership:** Station investors do not just hold a passive asset, they unlock network perks such as charging discounts while helping fund and shape ChargeFrog’s next station deployments.
 
 ### Claim (Revenue Distribution)
 
@@ -157,37 +292,481 @@ We allow anyone to own a piece of the growing EV infrastructure:
 
 - Claiming Earnings: We make it easy to Claim your revenue distribution in one click. Your monthly payouts from your investments are transferred directly to your wallet in Hedera, fully tracked On-chain.
 
-## The Architecture Behind: A Layered Protocol Stack
+## The Architecture Behind ChargeFrog
 
-<img width="1487" height="833" alt="Image" src="https://github.com/user-attachments/assets/8a0abe9f-1baf-4e3a-8fb8-86ee2b7d35fc" />
+<img width="1309" height="734" alt="Image" src="https://github.com/user-attachments/assets/b055aaed-2ec2-464b-9af5-4aa6e2f9a04c" />
 
-Our system is structured as a three-layer stack, with the Hedera Blockchain Layer serving as the definitive, immutable state machine.
+ChargeFrog is no longer just a frontend connected to smart contracts. It is a multi-layer, agent-orchestrated system that connects natural-language workflows, public and internal A2A agents, smart-contract infrastructure, Hedera-native asset and compliance services, backend charging operations, and a real physical charging station pilot.
 
-### Physical Layer
+### ChargeFrog's A2A Routing Agent
 
-This layer comprises the industrial hardware components: the EVSE (Electric Vehicle Supply Equipment) Hardware and the OCPP (Open Charge Point Protocol) Controller. Its connection to Hedera is critical, enabling secure, real-time data streaming and command execution (e.g., session start/stop/metering) that links physical events to on-chain state transitions. This ensures transparent station operation, verifiable Proof-of-Charge, and triggers CarbonFrog NFT minting and retirement for accurate carbon accounting through Guardian.
+`FroggyChat` is the public routing agent for ChargeFrog. It receives user or admin intent in natural language, classifies the request, and routes it to the correct public workflow agent. This is what turns the product from a static dApp into an agentic operating layer.
+
+### Public A2A Agents
+
+These are the hosted public agent surfaces exposed by ChargeFrog and wired into HOL Registry Broker workflows:
+
+- **FroggyPlanner:** handles station discovery, proposal generation, investor purchases, and token balance lookups.
+- **FroggyFoundry:** handles pending review, deployment approval, station deployment, and post-deployment asset issuance.
+- **FroggyGuardian:** handles Guardian policy enquiry, readiness checks, and policy or schema creation workflows.
+
+Together, these public agents make ChargeFrog interoperable as an A2A product surface rather than a closed application flow.
+
+### Internal A2A Agents
+
+Behind the public agents is a second layer of specialized worker agents that execute narrower tasks:
+
+- **Station Finder:** evaluates area demand, charging evidence, and candidate locations.
+- **Proposal Generator:** converts candidate station opportunities into structured investment proposals.
+- **Station Asset Issuer:** creates station-linked equity and bond assets after approval and deployment.
+- **Guardian Policy Summarizer:** retrieves and explains Guardian policy state for a station.
+- **Guardian Policy Creator / Replicator:** creates or replicates station-specific Guardian policies and schemas for carbon and compliance workflows.
+
+This split between public coordinators and internal workers keeps the product modular, auditable, and easier to scale.
+
+### Smart Contract Layer
+
+The smart-contract layer powers the economic core of the network:
+
+- **Registry:** manages station registration and network state.
+- **Shares:** represents station ownership and investor positions.
+- **Bolt ERC-20 Token:** powers charging payments within the ChargeFrog network.
+- **Station Contracts:** represent individual deployed charging stations and connect usage to revenue and ownership logic.
+
+Users and admins access these flows through the ChargeFrog application, with wallet tooling such as HashScan and MetaMask bridging signing and transaction execution.
+
+### Hedera Blockchain Layer
+
+ChargeFrog uses Hedera-native services as the trust and compliance backbone:
+
+- **Hedera Asset Tokenization:** supports compliant per-station equity and bond issuance, along with investment and balance workflows.
+- **Hedera Guardian:** manages station-specific policy logic, schema workflows, and the carbon-accounting trail tied to charging activity.
+
+This is the immutable layer that anchors ownership, issuance, revenue, and carbon accountability.
 
 ### Backend Orchestration Layer
 
-This traditional application layer is responsible for high-speed, off-chain computation and user-facing utilities:
+This layer handles the operational logic that sits between users, agents, and stations:
 
-- **Map and Navigation:** Geolocation services and pathfinding algorithms.
-- **Charging Workflow:** Business logic for session initiation, error handling, and display updates.
-- **Perks System:** Dynamic calculation and application of investor discounts and loyalty bonuses based on on-chain ownership records, but applied efficiently off-chain.
+- **Map and Navigation:** geolocation, station discovery, and routing context.
+- **Charging Workflow:** session initiation, status handling, and charging UX.
+- **Perks System:** applies investor discounts and network benefits based on ownership state.
 
-### Hedera On-Chain Layer
+It gives ChargeFrog a usable real-world product layer while keeping trust-critical state on Hedera.
 
-This core layer enforces all economic, governance, and carbon accountability logic, ensuring trustless execution and immutable state:
+### Physical Layer
 
-- **Asset Tokenization:** Fractionalized ERC-1400 & ERC-3643 Compliant Reg-S Station Equity tokens formalize real-world assets on Hedera.
+The physical layer is where the digital system meets real EV infrastructure:
 
-- **Bolt ERC-20 Token**: ERC-20 charging credits used to pay for sessions at active stations, fully enforced on-chain.
+- **Prototype Station Deployment:** the current PoC pilot station, Genesis.
+- **EVSE Hardware:** the charger hardware used to deliver energy in the real world.
+- **OCPP Controller:** the control layer that connects charging hardware events back into the ChargeFrog system.
 
-- **dMRV Carbon Tracking**: Hedera Guardian manages policy-driven minting and retirement of CarbonFrog NFTs, creating an auditable, real-time carbon offset trail.
+This is what closes the loop: agent workflows can lead to station deployment, stations generate charging activity, and those real-world events feed back into ownership, payments, and Guardian-backed carbon records.
 
-- **Station Governance & Revenue Distribution** - Smart contracts handle investment requests, minting, transfers, revenue claims, and network state updates.
+ChargeFrog incorporates dedicated ledgers for transparent and automated revenue distribution.
 
-The **ChargeFrog Super App** serves as the state conduit, submitting signed transactions—such as token swaps, investment requests, or claim operations—to Hedera, which triggers updates across equity, credits, and carbon offset audits. Investors and users interact seamlessly with the network, while the system guarantees transparency, compliance, and verifiable carbon accountability.
+### Principle (Trustless Settlement)
+
+Each charging station is a complete economic unit with its own dedicated **on-chain fund** (**Station Fund Ledger**) and **investor registry** (**Investor Ledger**). This ensures that revenue, shares, and payouts are isolated per station and fully transparent, without requiring off-chain reconciliation.
+
+### Key Features (Ledger and Claim Logic)
+
+- **Station Fund Ledger:** Tracks revenue accumulation in both **HBAR** and **ERC-20 Bolt** from charging sessions.
+- **Investor Ledger:** Records current share holdings per investor.
+- **Pro-Rata Claim Tracking:** Calculates an investor's entitled payout as a percentage of total accumulated revenue based on their equity ownership.
+- **Withdraw and Settlement:** Investors can claim their proportional share of HBAR and Bolt directly to their wallets.
+- **Verifiable Revenue Claim:** Every payout is recorded on-chain, providing transparent, auditable proof of the transaction.
+
+### Flow (Automated Distribution)
+
+1. **EV Drivers** pay for charging using **HBAR** or **Bolt ERC-20**, which is credited to the **Station Fund Ledger**.
+2. **Investors** hold **ERC-1400/ERC-3643 Compliant Station Equity Tokens** recorded in the **Investor Ledger**.
+3. Investors submit a **Claim** request.
+4. The system calculates their pro-rata share and initiates a **payout** in HBAR and/or Bolt directly to their wallet.
+
+## Agent Overview: FroggyChat
+
+<img width="1309" height="734" alt="Image" src="https://github.com/user-attachments/assets/07b99300-8a0d-43ef-87ae-03b51913a9aa" />
+
+FroggyChat is ChargeFrog’s public A2A entry point. It accepts ChargeFrog requests in natural language, understands the user’s intent, and routes the request to the correct public workflow agent. This makes it the conversational control layer for the product, connecting users and admins to the right operational flow without forcing them to understand the internal system architecture.
+
+### Communication Protocol
+
+- **Protocol:** A2A
+- **Role:** Public routing agent for ChargeFrog workflows
+- **Function:** Intent classification, downstream agent selection, and workflow handoff
+
+### Intent Routing
+
+FroggyChat routes requests based on what the caller is trying to do:
+
+- **Investment / finding a station:** routed to **FroggyPlanner**
+- **Admin deployment or issuance actions:** routed to **FroggyFoundry**
+- **Guardian-related actions:** routed to **FroggyGuardian**
+
+This means a user can simply ask in natural language, while FroggyChat handles the routing logic behind the scenes.
+
+### Core Capabilities
+
+- **Knowledge retrieval and reasoning:** interprets ChargeFrog-specific requests and determines the right workflow path.
+- **Data integration and visualization:** connects user intent to structured downstream agent results.
+- **Multi-agent coordination:** acts as the handoff layer between the caller and ChargeFrog’s public A2A agents.
+- **API integration and orchestration:** calls the correct public A2A endpoint for planner, foundry, or guardian workflows.
+- **Workflow automation:** turns a chat request into a routed, executable ChargeFrog workflow.
+
+## Agent Overview: FroggyPlanner
+
+<img width="1312" height="732" alt="Image" src="https://github.com/user-attachments/assets/b06628f2-8420-437d-8926-5132c1990fbc" />
+
+FroggyPlanner is ChargeFrog’s public A2A coordinator for station opportunity discovery, investment proposal orchestration, and investor-facing station workflows. It turns user intent into structured EV infrastructure actions, combining geospatial discovery, proposal generation, tokenized investment flows, and on-chain balance retrieval in one planner surface powered by the Hedera Asset Tokenization SDK.
+
+### Communication Protocol
+
+- **Protocol:** A2A
+- **Role:** Public planner and investment workflow coordinator
+- **Function:** Discover station opportunities, generate proposals, present investment options, execute asset purchases, and retrieve token balances
+
+### Core Capabilities
+
+- **Station discovery based on mini-nodes:** evaluates community demand, neighborhood thresholds, and charging evidence to identify viable station opportunities.
+- **Proposal generation engine:** coordinates internal worker agents and tool calls to turn a candidate location into a structured investment proposal.
+- **Investment flow coordination:** surfaces available stations, presents investment choices, and routes the user into the correct equity or bond workflow.
+- **Asset purchase and balance lookup:** connects planner-side investment requests to Hedera Asset Tokenization SDK-backed purchase execution and station-linked token balance retrieval.
+- **Scalable EV planning:** lets ChargeFrog move from ad-hoc site selection to repeatable, evidence-based expansion planning.
+
+### Workflow Orchestration
+
+FroggyPlanner coordinates both internal A2A workers and predefined tools:
+
+- **TomTom API + Station Finder:** resolve areas, evaluate nearby charging evidence, and identify candidate station locations.
+- **Proposal Generator:** builds proposal payloads, metadata, and investment rationale for a new station opportunity.
+- **On-chain + IPFS proposal publishing:** persists proposal context so it can move into approval and deployment workflows.
+- **FroggyFoundry handoff:** once a proposal is ready for admin action, deployment and token creation are handed off to FroggyFoundry.
+- **Proposal lookup + investable stations:** helps users find active station proposals that are open for investment.
+- **Hedera Asset Tokenization SDK:** powers purchase execution and balance lookup for station-linked equity and bond assets.
+
+### User Intent Flows
+
+FroggyPlanner supports the main investor and planning intents inside ChargeFrog:
+
+- **Opportunity discovery:** “find a station for proposal near X”
+- **Investment options:** “what stations are available right now?”
+- **Asset purchase:** “give me 10 equity tokens for this station”
+- **Balance lookup:** “what is my equity balance for station 1?”
+
+In practice, this means the same agent can help identify where the network should expand, package that opportunity into an investable proposal, and then let users buy into the station and verify their holdings on Hedera.
+
+## Agent Overview: FroggyFoundry
+
+<img width="1308" height="735" alt="Image" src="https://github.com/user-attachments/assets/0bfe85e4-c0c5-4f08-8ce7-2b2f318f2480" />
+
+FroggyFoundry is ChargeFrog’s public A2A admin agent for turning approved station proposals into live infrastructure and issued digital assets. It handles the admin side of the station lifecycle: reviewing pending stations, resolving approvals, deploying station contracts on ChargeFrog testnet, and orchestrating equity and bond token creation through the Hedera Asset Tokenization SDK.
+
+### Communication Protocol
+
+- **Protocol:** A2A
+- **Role:** Public admin deployment and issuance coordinator
+- **Function:** Review pending stations, approve deployment, execute station deployment, and create station-linked security tokens
+
+### Core Capabilities
+
+- **Pending approval review:** lists stations that are waiting for admin action and summarizes the relevant proposal context.
+- **Approval resolution:** allows admins to approve a pending station using a `stationId`, `proposalId`, or resolvable station name.
+- **Station deployment execution:** runs the deployment flow for the approved station bundle on ChargeFrog testnet and persists the resulting deployment metadata.
+- **Asset issuance automation:** triggers the internal station asset issuer to create both equity and bond tokens for the deployed station.
+- **Admin workflow coordination:** connects queue review, deployment, issuance, and post-deployment records into one admin-facing workflow.
+
+### Workflow Orchestration
+
+FroggyFoundry coordinates internal A2A workers and predefined deployment or issuance tools:
+
+- **Queue lookup + pending stations:** identifies which proposals are waiting for admin action.
+- **Approval resolution:** maps admin intent to the correct pending station or proposal.
+- **Deploy to ChargeFrog testnet:** executes station deployment using ChargeFrog contract deployment logic.
+- **On-chain transaction hashes:** returns deployment transaction context so admins can verify execution.
+- **Station Asset Issuer:** hands off to the internal issuance worker after deployment is complete.
+- **Hedera Asset Tokenization SDK:** powers the creation of the station’s equity and bond tokens and records the on-chain issuance outputs.
+
+### Admin Intent Flows
+
+FroggyFoundry supports the main admin intents inside ChargeFrog:
+
+- **Pending admin queue:** “which stations require my attention?”
+- **Approval resolution:** “approve station 8” or “approve proposal <proposalId>”
+- **Station deployment:** deploy the approved station bundle to ChargeFrog testnet
+- **Security token creation:** issue the station’s equity and bond assets after deployment
+
+In practice, this means admin users no longer need to move across disconnected dashboards to review, approve, deploy, and issue. FroggyFoundry turns those actions into one coordinated workflow.
+
+## Agent Overview: FroggyGuardian
+
+<img width="1311" height="734" alt="Image" src="https://github.com/user-attachments/assets/74c99960-d6ae-406c-b32e-e279da801bd0" />
+
+FroggyGuardian is ChargeFrog’s public A2A coordinator for station-specific Guardian policy enquiries and policy-creation workflows. It provides the compliance and verification surface of the product, coordinating internal worker agents and Hedera Guardian so admins can inspect station policies, summarize what those policies do, identify stations that are ready for Guardian workflows, and create or replicate the required policy and schema setup.
+
+### Communication Protocol
+
+- **Protocol:** A2A
+- **Role:** Public Guardian policy and compliance workflow coordinator
+- **Function:** Handle policy enquiry, policy summarization, station readiness checks, and controlled Guardian policy creation flows
+
+### Core Capabilities
+
+- **Policy discovery intelligence:** locates Guardian policies associated with a specific ChargeFrog station.
+- **Station policy summaries:** retrieves and explains what a station’s Guardian policy controls, tracks, and enables.
+- **Guardian policy creation:** initiates station-specific policy and schema creation or replication workflows for qualified stations.
+- **Verified compliance workflows:** connects ChargeFrog station state to Guardian-backed carbon and compliance processes in a structured, auditable way.
+
+### Workflow Orchestration
+
+FroggyGuardian coordinates internal A2A workers and predefined Guardian tools:
+
+- **List all Guardian policies:** discovers existing policy records that may relate to a station.
+- **Match with station / policy name:** resolves the correct policy context from a station name or station record.
+- **Guardian Policy Summarizer:** produces a full summary of the relevant policy and associated schema context.
+- **Guardian Policy Replicator:** triggers the controlled creation or replication workflow for station-specific policy setup.
+- **Origin policy and schema lookup:** finds the source carbon-offset and token-retire policies and schemas used as templates.
+- **Create and publish workflow:** creates a new policy based on those origins, then publishes it with on-chain transaction outputs and Guardian role context.
+
+### Admin Intent Flows
+
+FroggyGuardian supports the main Guardian-oriented intents inside ChargeFrog:
+
+- **Policy creation:** create Guardian policy and schema flows for a fully-invested station
+- **Policy enquiry:** inspect the Guardian policy for a specific station
+- **Policy summarization:** return a readable summary of the policy and schema state
+- **Station readiness:** determine which fully-invested stations are ready for Guardian workflows
+
+In practice, this means admins no longer have to manually navigate Guardian dashboards to inspect, compare, or recreate policy infrastructure for each station.
+
+## How ChargeFrog Utilizes the Hedera Asset Tokenization SDK: Token Initialization(ERC-1400 + ERC-3643)
+
+<img width="1311" height="736" alt="Image" src="https://github.com/user-attachments/assets/ebc9d99a-91e6-4c24-bb8d-8d90a42d4581" />
+
+### Token Initialization — ERC-1400 + ERC-3643
+
+ChargeFrog uses the **Hedera Asset Tokenization SDK** to initialize every EV charging station as its own **regulated digital security product**.
+
+Instead of treating the entire charging network as one pooled asset, we tokenize **station by station**. Each station can carry its own **equity token** and **bond token**, allowing every physical charger to become its own investable on-chain asset with its own ownership, legal structure, and compliance logic.
+
+This initialization flow is powered by **C.R.A.T.E**, our backend layer that runs the Hedera Asset Tokenization SDK and composes the full security architecture for each station asset.
+
+### Station-Level Security Composition
+
+For every station, ChargeFrog creates a digital security structure by combining the standards exposed through the SDK:
+
+- **ERC-20** for balances, wallet compatibility, and asset visibility
+- **ERC-1594** for regulated issuance and transfer semantics
+- **ERC-1410** for partitioned ownership structures
+- **ERC-1643** for legal document anchoring
+- **ERC-1644** for controller intervention and override authority
+- **ERC-3643** for compliance and identity enforcement
+
+Together, these components allow each station token to behave like a real digital security, not just a generic on-chain token.
+
+### What Gets Initialized
+
+Each station asset is composed with multiple layers:
+
+#### Asset Composition Layer
+
+Every station starts with two tokenized financial instruments:
+
+- **Equity Token**
+- **Bond Token**
+
+This gives ChargeFrog a way to represent both ownership exposure and debt-style financing at the station level.
+
+#### Token Composition Layer
+
+The SDK is used to define the asset’s internal financial logic:
+
+- balances and issuance rules
+- legal and cashflow rails
+- partitioned ownership
+- compliance gates
+- controller permissions
+
+#### Governance and Access Control Layer
+
+Station assets are initialized with role-based access and governance functions, including:
+
+- agent execution authority
+- issuer permissions
+- document management authority
+- controller-level administrative power
+
+This makes the token model operationally usable inside ChargeFrog’s agent workflows.
+
+#### Token Interface Layer
+
+ChargeFrog activates the interface and issuance semantics required for real asset operations:
+
+- **ERC-20** for balances and wallet/explorer visibility
+- **ERC-1594** for regulated issuance, transfer, and redemption behavior
+
+#### Compliance and Identity Layer
+
+Using **ERC-3643**, ChargeFrog connects station assets to identity and compliance checks so that holding, transfer, and issuance rules can be enforced before any asset movement occurs.
+
+#### Intervention Layer
+
+Using **ERC-1644**, the asset model supports controller-level intervention when needed, including override authority, exceptional transfer control, and auditable administrative actions.
+
+#### Ownership Structuring Layer
+
+Using **ERC-1410**, ChargeFrog enables partitioned balances so station ownership can be segmented and managed under rule-based unlock conditions.
+
+#### Regulation Layer
+
+ChargeFrog configures station assets with regulatory constraints, such as restricted issuance or restricted buy/sell flows, so compliance is embedded directly into the token model.
+
+#### Legal Anchoring Layer
+
+Using **ERC-1643**, legal documents are anchored directly to the station asset through document references and hashes. This allows every tokenized station to carry legal linkage as part of its security structure.
+
+#### Financial Operations Layer
+
+Once initialized, each station asset can support downstream financial logic such as:
+
+- ownership snapshots
+- allocation sets
+- regulated payout distributions
+- token-driven cashflow operations
+
+### Why This Matters
+
+The Hedera Asset Tokenization SDK is not just used by ChargeFrog to mint tokens.
+
+It is used to define the **full security architecture** of every station from day one — ownership model, compliance gates, legal anchoring, controller authority, issuance semantics, and asset visibility.
+
+That means every ChargeFrog station is initialized as its own **compliant, programmable, and investable on-chain financial product**.
+
+## How ChargeFrog Utilizes the Hedera Asset Tokenization SDK: Investment
+
+<img width="1309" height="736" alt="Image" src="https://github.com/user-attachments/assets/230e254b-30e0-4b79-8fed-37a5690ee42e" />
+
+ChargeFrog uses the **Hedera Asset Tokenization SDK** to power the live investment flow for each tokenized EV charging station.
+
+Once a station has been initialized as its own digital security product, the SDK becomes the engine that allows investors to interact with that station as a real on-chain investment opportunity.
+
+This flow is powered through **C.R.A.T.E**, our backend layer running the Hedera Asset Tokenization SDK, and exposed through ChargeFrog’s agentic workflow system.
+
+### From User Intent to Tokenized Investment
+
+The investment experience begins with **FroggyPlanner**.
+
+FroggyPlanner connects investor intent directly to tokenized station opportunities by using the SDK-backed backend to:
+
+- surface available station investment options
+- retrieve investor balances and holdings
+- identify which station-specific asset the investor wants exposure to
+
+Instead of sending users into a disconnected issuance system, ChargeFrog keeps discovery and execution inside one agentic workflow.
+
+### Regulated Investment Flow
+
+Once an investor selects a station and transfers **HBAR**, the system can move through a regulated issuance path backed by the Hedera Asset Tokenization SDK.
+
+The flow includes:
+
+1. **Eligibility check**  
+   The investor is evaluated against the rules required to access the station-specific asset.
+
+2. **Compliance and regulation check**  
+   Identity, permissions, and transfer restrictions are enforced before issuance proceeds.
+
+3. **Treasury receives funds**  
+   The station treasury receives the incoming HBAR for the investment transaction.
+
+4. **Security tokens are issued**  
+   The correct station-specific **equity token** or **bond token** is issued to the investor.
+
+5. **Balances are updated**  
+   The investor’s token balances are updated for visibility and wallet compatibility.
+
+6. **Ownership partitions are assigned**  
+   Partition logic can be applied where ownership needs structured segmentation.
+
+7. **Transfer and holding rules are enforced**  
+   Compliance-aware restrictions remain active after issuance, not just before it.
+
+8. **On-chain events are emitted**  
+   The entire issuance flow becomes observable and auditable through emitted on-chain actions.
+
+### Role of the Agents
+
+ChargeFrog does not use the SDK as a passive backend utility. It is integrated directly into our agents.
+
+#### FroggyPlanner
+
+FroggyPlanner acts as the investor-facing orchestration layer. It helps users discover station opportunities, understand availability, and connect their investment intent to a specific tokenized charger.
+
+#### FroggyFoundry
+
+FroggyFoundry acts as the execution layer. Once the investment path is ready, it can create and issue the station-specific equity and bond tokens required for the transaction.
+
+Together, these agents turn the Hedera Asset Tokenization SDK into a live operational system rather than a one-time setup tool.
+
+### Why This Matters
+
+Most tokenization demos stop at asset creation.
+
+ChargeFrog goes further by using the Hedera Asset Tokenization SDK inside a real investment workflow where infrastructure assets can be:
+
+- discovered
+- evaluated
+- funded
+- issued
+- updated
+- enforced
+- tracked on-chain
+
+So the SDK is not just used to mint station tokens. It is used to make every tokenized station **investable in practice**.
+
+The result is that each EV station in ChargeFrog can function as its own **compliant, investable, and operationally issuable digital security product**, with agentic workflows connecting user intent directly to real on-chain asset execution.
+
+## 🕵🏻 Auditing ChargeFrog on Hedera with Guardian
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/f05f5e1a-4c59-428a-8399-909aab56224b" width="677" height="688" alt="Image" />
+</p
+
+ChargeFrog directly addresses the Voluntary Carbon Market (VCM) credibility crisis, where traditional "analog" Monitoring, Reporting, and Verification (MRV) processes are often retrospective, slow, and opaque. This lack of transparency makes genuine green claims vulnerable to "greenwashing" allegations and investor skepticism.
+
+To solve this, **ChargeFrog leverages the Hedera Guardian platform** to implement a **Digital MRV (dMRV) system**. This creates a high-trust, automated environment where every charging session contributes to a full carbon accountability cycle: emissions are tracked, verified, and offset in real-time using immutable data.
+
+### The Automated Carbon Lifecycle
+
+The system operates through two distinct, policy-driven scenarios that generate an immutable audit trail via **Verifiable Credentials (VC)** and **Verifiable Presentations (VP)**.
+
+### 1. Mint Scenario: Real-Time Accumulation
+
+As users charge their EVs, the system tracks carbon offsets at a granular level.
+
+- **The Trigger:** For every **100g of CO2 offset** via physical charging, the system triggers the Carbon Offset Policy.
+- **The Action:** The policy automatically **mints a unique "CarbonFrog" NFT**.
+- **The Flow:** This NFT is transferred from the ChargeFrog Treasury to a designated Admin account.
+- **The Proof:** Simultaneously, a **VC-VP pair is generated on-chain**, linking the digital token directly to the physical charging data, proving the offset is real and unique.
+
+### 2. Retire Scenario: Cyclical Finality
+
+To ensure offsets are not double-counted or resold, the system enforces a **retirement logic**.
+
+- **The Trigger:** Once the accumulated offsets reach **1kg of CO2**, the Token Retire Policy is activated.
+- **The Action:** The system executes a **Retire Scenario**, which "wipes" (burns) the CarbonFrog NFT from the ledger in 1kg increments.
+- **The Audit:** This retirement action is **permanently recorded on the Hedera ledger**.
+
+### Transparency & Verification
+
+This architecture provides an **irreversible proof of action**. By clicking on the generated Hashscan links within the ChargeFrog app, users and auditors can:
+
+- View the Treasury’s operations in real-time
+- Verify that a token was minted when a car was charged
+- Confirm it was subsequently retired to finalize the offset
+
+This eliminates the "black box" of traditional carbon credits, replacing it with a **transparent, on-chain history** that confirms high-integrity sustainability.
 
 ## 💳 Optimizing Charging Economics with BOLT (ERC-20 Token)
 
@@ -238,98 +817,6 @@ The **Station Registry** maps each unique Station ID to a structured record cont
 - **Shares Issued:** Quantity of **ERC-1400 & ERC-3643 compliant Station Equity** tokens minted for investors.
 - **Funding Progress:** Percentage of the funding goal achieved.
 - **Operational Status:** Current lifecycle state, determining when the station is active and generating revenue.
-
-## 🪙 Realizing Fractional Investment with Native Asset Tokenization
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/8c872163-eb37-4233-a2ac-e909d2079cc1" width="746" height="714" alt="Image" />
-</p
-
-ChargeFrog utilizes the Hedera Asset Tokenization SDK capabilities to represent ownership units as compliant security tokens.
-
-## Model (Fixed Supply Security Token)
-
-Each charging station is deployed by the ChargeFrog Admin as a **Diamond (EIP-2535) Proxy Contract**, creating a fixed-supply, on-chain equity registry. Investors receive tokenized ownership units that are minted as **ERC-1400 & ERC-3643 compliant Reg-S Station Equity** on the Hedera network, ensuring the asset is treated as a verified digital security.
-
-## Key Features (Hedera SDK Utility)
-
-- **Uses Hedera's Asset Tokenization:** Leveraging the SDK’s standardized framework for secure and compliant token issuance.
-- **Supports Fractional Equity Ownership:** Tokens are divisible, allowing for precise, fractionalized investment in station assets.
-- **Global Ownership Registry:** All shares are transparently minted and recorded on the Hedera network.
-- **Shares Investment Tracking:** Provides a transparent, on-chain history of all investment records.
-- **ERC-1400 & ERC-3643 Reg-S Compliance:** Mints shares specifically as regulated Security Equity Tokens rather than simple utility assets.
-
-## Process (Supply & Governance)
-
-When investors transfer **HBAR**, the station triggers a formal **Equity Investment Request**. This request is processed by the **Admin Panel** via the **Hedera Asset Tokenization SDK**, which handles the **Mint** and **Transfer** of Station Equity back to the investor. The system manages the **Station Shares** by tracking the **Total Shares Supply** and **Circulating Shares**, ensuring transparent investor governance and updating the **On-Chain Investment Records**.
-
-## 📊 Transparent Revenue Sharing & Pro-Rata Claims for Investors
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/1c544c16-475a-450c-b3a0-9e956cdfca72" width="591" height="827" alt="Image" />
-</p>
-
-ChargeFrog incorporates dedicated ledgers for transparent and automated revenue distribution.
-
-### Principle (Trustless Settlement)
-
-Each charging station is a complete economic unit with its own dedicated **on-chain fund** (**Station Fund Ledger**) and **investor registry** (**Investor Ledger**). This ensures that revenue, shares, and payouts are isolated per station and fully transparent, without requiring off-chain reconciliation.
-
-### Key Features (Ledger and Claim Logic)
-
-- **Station Fund Ledger:** Tracks revenue accumulation in both **HBAR** and **ERC-20 Bolt** from charging sessions.
-- **Investor Ledger:** Records current share holdings per investor.
-- **Pro-Rata Claim Tracking:** Calculates an investor's entitled payout as a percentage of total accumulated revenue based on their equity ownership.
-- **Withdraw and Settlement:** Investors can claim their proportional share of HBAR and Bolt directly to their wallets.
-- **Verifiable Revenue Claim:** Every payout is recorded on-chain, providing transparent, auditable proof of the transaction.
-
-### Flow (Automated Distribution)
-
-1. **EV Drivers** pay for charging using **HBAR** or **Bolt ERC-20**, which is credited to the **Station Fund Ledger**.
-2. **Investors** hold **ERC-1400/ERC-3643 Compliant Station Equity Tokens** recorded in the **Investor Ledger**.
-3. Investors submit a **Claim** request.
-4. The system calculates their pro-rata share and initiates a **payout** in HBAR and/or Bolt directly to their wallet.
-
-## 🕵🏻 Auditing ChargeFrog on Hedera with Guardian
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/f05f5e1a-4c59-428a-8399-909aab56224b" width="677" height="688" alt="Image" />
-</p
-
-ChargeFrog directly addresses the Voluntary Carbon Market (VCM) credibility crisis, where traditional "analog" Monitoring, Reporting, and Verification (MRV) processes are often retrospective, slow, and opaque. This lack of transparency makes genuine green claims vulnerable to "greenwashing" allegations and investor skepticism.
-
-To solve this, **ChargeFrog leverages the Hedera Guardian platform** to implement a **Digital MRV (dMRV) system**. This creates a high-trust, automated environment where every charging session contributes to a full carbon accountability cycle: emissions are tracked, verified, and offset in real-time using immutable data.
-
-## The Automated Carbon Lifecycle
-
-The system operates through two distinct, policy-driven scenarios that generate an immutable audit trail via **Verifiable Credentials (VC)** and **Verifiable Presentations (VP)**.
-
-### 1. Mint Scenario: Real-Time Accumulation
-
-As users charge their EVs, the system tracks carbon offsets at a granular level.
-
-- **The Trigger:** For every **100g of CO2 offset** via physical charging, the system triggers the Carbon Offset Policy.
-- **The Action:** The policy automatically **mints a unique "CarbonFrog" NFT**.
-- **The Flow:** This NFT is transferred from the ChargeFrog Treasury to a designated Admin account.
-- **The Proof:** Simultaneously, a **VC-VP pair is generated on-chain**, linking the digital token directly to the physical charging data, proving the offset is real and unique.
-
-### 2. Retire Scenario: Cyclical Finality
-
-To ensure offsets are not double-counted or resold, the system enforces a **retirement logic**.
-
-- **The Trigger:** Once the accumulated offsets reach **1kg of CO2**, the Token Retire Policy is activated.
-- **The Action:** The system executes a **Retire Scenario**, which "wipes" (burns) the CarbonFrog NFT from the ledger in 1kg increments.
-- **The Audit:** This retirement action is **permanently recorded on the Hedera ledger**.
-
-## Transparency & Verification
-
-This architecture provides an **irreversible proof of action**. By clicking on the generated Hashscan links within the ChargeFrog app, users and auditors can:
-
-- View the Treasury’s operations in real-time
-- Verify that a token was minted when a car was charged
-- Confirm it was subsequently retired to finalize the offset
-
-This eliminates the "black box" of traditional carbon credits, replacing it with a **transparent, on-chain history** that confirms high-integrity sustainability.
 
 ## 🌍 The Business: Our Vision and Strategy
 
@@ -423,13 +910,21 @@ We focus on three core metrics to validate our model and drive adoption:
 
 ## 🛣️ What's next in our developer roadmap?
 
-<img width="1490" height="837" alt="Image" src="https://github.com/user-attachments/assets/6c2a2240-ac58-415d-9379-ada416085280" />
+<img width="1306" height="735" alt="Image" src="https://github.com/user-attachments/assets/4b93badd-e794-45ee-9ed4-178ddb0f1e6b" />
 
 We have successfully completed the **MVP + Pilot on Hedera Testnet**, featuring a mobile-based EV charging super app with real-life pilot station integration. Our next steps involve expanding functionality and preparing for mainnet launch:
 
-- **Live on Hedera Mainnet:** Mainnet deployment of Smart Contracts, Equity Tokens, and Guardian policies.
-- **Introduce Hedera AI Studio:** This agent will assist network investors to perform analysis on proposed locations and list out high ROI potential options, adding value to the community investment process.
-- **ChargeFrog ReFI :** User-selected payment round-up sends fractional change to an Impact Fund; users receive a Proof-of-Impact governance token.
+### Shipped
+
+- **MVP + Pilot on Hedera Testnet:** We have already shipped a mobile EV charging super app on Hedera testnet with real-world pilot station integration and compliant asset tokenization.
+- **Introduce Agentic AI:** We have introduced public A2A agents registered on HOL Registry, expanding ChargeFrog with agentic planning, deployment, issuance, and Guardian workflow capabilities on Hedera.
+
+### Next Up
+
+- **Testnet to Mainnet:** Mainnet deployment of ChargeFrog smart contracts, equity tokens, and Guardian policies.
+- **Community Hardware Expansion:** Release the open-source **ChargeFrog Pi** EVSE controller build on Raspberry Pi to extend the network through community-operated hardware.
+
+And more releases are coming soon.
 
 ## 🤝 The Minds Behind ChargeFrog
 

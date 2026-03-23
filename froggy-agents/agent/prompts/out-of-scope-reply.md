@@ -1,0 +1,1 @@
+Out of scope. I only handle station investment, station discovery/interest, investment proposals, equity/bond purchases, and token balance lookups. Station deployment and token creation are handled by FroggyFoundry.

@@ -1,4 +1,5 @@
 import { network } from "hardhat";
+import type { BaseContract, ContractTransactionResponse } from "ethers";
 import { writeFileSync, mkdirSync } from "fs";
 import path from "path";
 // ----------------------------------------------------------
@@ -10,6 +11,58 @@ const BOLT_PER_HBAR = 3n;
 const { ethers } = await network.connect({
   network: "testnet",
 });
+
+type TxResponse = ContractTransactionResponse;
+
+type RegistryContract = BaseContract & {
+  initializeAdmin(adminAddress: string): Promise<TxResponse>;
+  createStation(
+    totalInvestment: bigint,
+    totalShares: bigint | number,
+    stationMetadata: Uint8Array,
+    fundAddress: string
+  ): Promise<TxResponse>;
+  nextId(): Promise<bigint>;
+  initializeStationAdmin(
+    stationId: bigint,
+    stationAdminAddr: string
+  ): Promise<TxResponse>;
+  updateFundAddress(stationId: bigint, newFund: string): Promise<TxResponse>;
+};
+
+type StationContract = BaseContract & {
+  connect(runner: unknown): StationContract;
+  setSharesTracker(tracker: string): Promise<TxResponse>;
+  totalInvestmentTarget(): Promise<bigint>;
+  raisedAmount(): Promise<bigint>;
+  totalRevenueBolt(): Promise<bigint>;
+  investedAmount(investor: string): Promise<bigint>;
+  unclaimed(investor: string): Promise<bigint>;
+  invest(overrides: { value: bigint }): Promise<TxResponse>;
+  setStationActive(active: boolean): Promise<TxResponse>;
+  claim(): Promise<TxResponse>;
+};
+
+type BoltContract = BaseContract & {
+  connect(runner: unknown): BoltContract;
+  registerStation(stationId: bigint, fundAddress: string): Promise<TxResponse>;
+  buyBolt(overrides: { value: bigint }): Promise<TxResponse>;
+  approve(spender: string, amount: bigint): Promise<TxResponse>;
+  spendBolt(stationId: bigint, amount: bigint): Promise<TxResponse>;
+  balanceOf(account: string): Promise<bigint>;
+};
+
+function asRegistry(contract: BaseContract): RegistryContract {
+  return contract as unknown as RegistryContract;
+}
+
+function asStation(contract: BaseContract): StationContract {
+  return contract as unknown as StationContract;
+}
+
+function asBolt(contract: BaseContract): BoltContract {
+  return contract as unknown as BoltContract;
+}
 
 function weibar(hbar: number | bigint) {
   return BigInt(hbar) * ONE_HBAR_WEIBAR;
@@ -77,7 +130,7 @@ async function main() {
   // ----------------------------------------------------------
   logN("\n== Deploying Registry ==");
   const Registry = await ethers.getContractFactory("Registry", admin);
-  const registry = await Registry.deploy();
+  const registry = asRegistry(await Registry.deploy());
   // Log deploy tx hash before awaiting deployment
   const registryDeployTx =
     registry.deploymentTransaction?.() ??
@@ -91,14 +144,14 @@ async function main() {
 
   // Initialize registry-level admin (set to admin signer address)
   await logTx(
-    await (registry as any).initializeAdmin(admin.address),
+    await registry.initializeAdmin(admin.address),
     "Initialize Registry Admin"
   );
   logN("🔐 Registry admin initialized:", admin.address);
 
   logN("\n== Deploying Bolt (ERC-20) ==");
   const Bolt = await ethers.getContractFactory("Bolt", admin);
-  const bolt = await Bolt.deploy("Bolt", "BOLT");
+  const bolt = asBolt(await Bolt.deploy("Bolt", "BOLT"));
   const boltDeployTx =
     bolt.deploymentTransaction?.() ?? (bolt as any).deploymentTransaction?.();
   if (boltDeployTx) {
@@ -157,7 +210,7 @@ async function main() {
   const Station = await ethers.getContractFactory("Station", admin);
   const Shares = await ethers.getContractFactory("Shares", admin);
 
-  let primaryStation: any = null;
+  let primaryStation: StationContract | null = null;
   let primaryStationId: bigint = 0n;
   let primaryStationAddress = "";
   let primarySharesAddress = "";
@@ -177,14 +230,14 @@ async function main() {
       `➡️ Station record created (id=${stationId.toString()}) for ${def.name}`
     );
 
-    const stationContract = await Station.deploy(
+    const stationContract = asStation(await Station.deploy(
       stationId,
       targetWei,
       registryAddress,
       boltAddress,
       def.name,
       def.website
-    );
+    ));
     const stationDeployTx =
       stationContract.deploymentTransaction?.() ??
       (stationContract as any).deploymentTransaction?.();
@@ -212,14 +265,14 @@ async function main() {
     await sharesContract.waitForDeployment();
     const sharesAddr = await sharesContract.getAddress();
     await logTx(
-      await stationContract.connect(admin).setSharesTracker(sharesAddr),
+      await asStation(stationContract.connect(admin)).setSharesTracker(sharesAddr),
       `Set Shares Tracker (stationId=${stationId.toString()})`
     );
     logN(`🔗 Shares wired: ${sharesAddr}`);
 
     // Initialize station admin & update fund address inside registry
     await logTx(
-      await (registry as any).initializeStationAdmin(stationId, stationAddr),
+      await registry.initializeStationAdmin(stationId, stationAddr),
       `Initialize Station Admin (stationId=${stationId.toString()})`
     );
     await logTx(
@@ -259,7 +312,7 @@ async function main() {
   }
   const station2Id = 2n;
   const station2Address = targetStationInfo.address;
-  const station2 = await Station.attach(station2Address);
+  const station2 = asStation(Station.attach(station2Address));
   // Pull target directly from chain (already a bigint) to avoid parsing issues
   const station2TargetWei = await station2.totalInvestmentTarget();
 
@@ -316,9 +369,8 @@ async function main() {
   logN("Station 2 target (wei) read:", station2TargetWei.toString());
   logN("Intended invest (wei):", intendedInvest.toString());
   // Attempt full-target investment
-  const investTx = await station2
-    .connect(investor)
-    .invest({ value: intendedInvest });
+  const investorStation2 = asStation(station2.connect(investor));
+  const investTx = await investorStation2.invest({ value: intendedInvest });
   await logTx(investTx, "Investor Full Invest Station 2 (attempt 1)");
   let raisedAfter = await station2.raisedAmount();
   logN(
@@ -337,7 +389,7 @@ async function main() {
       )})`
     );
     await ensureHbar(admin, investor.address, delta + weibar(1n));
-    const investTx2 = await station2.connect(investor).invest({ value: delta });
+    const investTx2 = await investorStation2.invest({ value: delta });
     await logTx(investTx2, "Investor Top-up Station 2 (attempt 2)");
     raisedAfter = await station2.raisedAmount();
     logN(
@@ -371,7 +423,7 @@ async function main() {
       // Make sure investor has enough balance to cover the delta
       await ensureHbar(admin, investor.address, deltaWei + weibar(1n));
       await logTx(
-        await station2.connect(investor).invest({ value: deltaWei }),
+        await investorStation2.invest({ value: deltaWei }),
         "Investor Top-up Station 2"
       );
       const raisedPost = await station2.raisedAmount();
@@ -390,8 +442,9 @@ async function main() {
   const buyAmtWei = weibar(2n); // 2 HBAR => 6 BOLT (18 decimals)
   logN("buyAmtWei:", buyAmtWei.toString());
   logN("\n== Buying Bolt (HBAR -> BOLT) ==");
+  const spenderBolt = asBolt(bolt.connect(spender));
   await logTx(
-    await bolt.connect(spender).buyBolt({ value: buyAmtWei }),
+    await spenderBolt.buyBolt({ value: buyAmtWei }),
     "Buy BOLT with HBAR"
   );
   // Prefer the explicit getBalance helper (falls back to balanceOf if unavailable)
@@ -411,17 +464,16 @@ async function main() {
     "| human:",
     ethers.formatUnits(station2BoltBefore, 18)
   );
-  const spendEquivalentWei = weibar(18n); // spend equivalent of 1 HBAR worth of BOLT
+  const boltToSpend2 = ethers.parseUnits("3", 18); // 1 HBAR equivalent at 3 BOLT/HBAR
   logN(
-    `Attempting to spend Bolt at Station 2... ${spendEquivalentWei.toString()} wei (1 HBAR equivalent)`
+    `Attempting to spend Bolt at Station 2... ${boltToSpend2.toString()} raw BOLT units (3 BOLT, 1 HBAR equivalent)`
   );
-  const boltToSpend2 = spendEquivalentWei * BOLT_PER_HBAR; // 1 HBAR => 3e18 BOLT units
   await logTx(
-    await bolt.connect(spender).approve(boltAddress, boltToSpend2),
+    await spenderBolt.approve(boltAddress, boltToSpend2),
     "Approve BOLT Allowance (Station 2)"
   );
   await logTx(
-    await bolt.connect(spender).spendBolt(station2Id, boltToSpend2),
+    await spenderBolt.spendBolt(station2Id, boltToSpend2),
     "Spend BOLT at Station 2"
   );
   logN("🧾 Bolt spent at Station 2 (raw units):", boltToSpend2.toString());
@@ -455,8 +507,9 @@ async function main() {
   // ----------------------------------------------------------
   // (6) Activate claims (no direct HBAR deposit; revenue comes from BOLT spend)
   // ----------------------------------------------------------
+  const adminStation2 = asStation(station2.connect(admin));
   await logTx(
-    await station2.connect(admin).setStationActive(true),
+    await adminStation2.setStationActive(true),
     "Set Station 2 Active"
   );
   logN("✅ Station 2 claims activated (BOLT spend supplies revenue)");
@@ -523,7 +576,7 @@ async function main() {
   );
   if (s2PendingWei > 0n) {
     await logTx(
-      await station2.connect(investor).claim(),
+      await investorStation2.claim(),
       "Investor Claim Station 2"
     );
     logN("✅ Investor claimed successfully from Station 2!");
@@ -570,7 +623,8 @@ async function main() {
   }
 
   // ----------------------------------------------------------
-  await main().catch((err) => {
-    console.error("❌ Deployment error:", err);
-  });
 }
+
+await main().catch((err) => {
+  console.error("❌ Deployment error:", err);
+});
