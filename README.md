@@ -10,11 +10,11 @@
 
 ## 🐸 Our Deliverables
 
-1. Our Demo Video (Youtube) [🌐Watch It!]()
+1. Our Demo Video (Youtube) [🌐Watch It!](https://www.youtube.com/watch?v=Pphs5G_KjcQ)
 
-2. Our Pitch Deck (PDF) [🌐Read It!]()
+2. Our Pitch Deck (PDF) [🌐Read It!](https://drive.google.com/file/d/1fXhCe5W097TYsplSyKx331k1IGziHzZg/view?usp=sharing)
 
-3. Our Demo DApp (Deployed on Hedera Testnet) [🌐Try It!]()
+3. Our Demo DApp (Deployed on Hedera Testnet) [🌐Try It!](https://chargefrog-hedera.vercel.app/)
 
 ## TL;DR 👉 What is ChargeFrog?
 
