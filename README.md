@@ -246,13 +246,13 @@ Digital security token holders receive multiple benefits:
 
 ## 🐸 We Pack Everything in Our All-in-One Super App
 
-<img width="1130" height="1172" alt="Image" src="https://github.com/user-attachments/assets/8a122daa-3078-491f-a3bd-feffe531a207" />
+<img width="981" height="572" alt="Image" src="https://github.com/user-attachments/assets/7ecc2648-1498-4984-8659-739856c875bf" />
 
-At ChargeFrog, we have created a single Super App that unites EV charging, decentralized investment, and reward management. We built ChargeFrog on Hedera to be secure, transparent, and fully on-chain:
+At ChargeFrog, everything is packed into one Super App. Users can discover nearby stations, navigate to them, start and monitor live charging sessions, invest in upcoming station proposals through FroggyPlanner, and track earnings from the assets they own. We built ChargeFrog on Hedera so charging activity, investment flows, and revenue claims remain transparent, verifiable, and connected in one product surface:
 
-- Simplified Asset Management: Swap HBAR for Bolt charging credits, invest in ERC-1400 & ERC-3643 Compliant, Reg-S Station Equity tokens, claim your revenue share, and manage your profile—all in one place with verifiable on-chain records.
+- **Unified charging and ownership experience:** Swap HBAR for Bolt charging credits, invest in ERC-1400 & ERC-3643 compliant Reg-S station equity, claim revenue share, and manage your position without leaving the app.
 
-- Shaping the Network: Participate in the growth of our network by proposing new station locations and submitting them for the next investment round, empowering you to co-govern and co-build the network.
+- **One app for network participation:** Move from finding a station, to charging, to investing, to checking your earnings in a single mobile experience, while still helping shape where the network expands next.
 
 ### ⚡️ A Unified Charging Experience
 
